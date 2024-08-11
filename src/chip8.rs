@@ -321,12 +321,8 @@ impl Emulator for Chip8Emulator {
                             local_x = 7 - local_x;
 
                             let sprite_pixel = ((cur_line >> local_x) & 1) != 0;
-                            if x >= 64 {
-                                x -= 64;
-                            }
-                            if y >= 32 {
-                                y -= 32;
-                            }
+                            x = x % 64;
+                            y = y % 32;
                             let cur_screen_pixel = screen_bits[x + y * 64];
                             let new_pixel = (sprite_pixel || cur_screen_pixel)
                                 && !(sprite_pixel && cur_screen_pixel);
