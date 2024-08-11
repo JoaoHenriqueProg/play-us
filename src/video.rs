@@ -18,7 +18,7 @@ impl Screen {
 
         let mut canvas = window
             .into_canvas()
-            .software()
+            .accelerated()
             .build()
             .map_err(|e| e.to_string()).unwrap();
 
