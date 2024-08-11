@@ -233,6 +233,17 @@ impl Emulator for Chip8Emulator {
                     );
                     self.cpu.regs[reg_i1] = self.cpu.regs[reg_i1] ^ self.cpu.regs[reg_i2];
                 }
+                ('8', r1, r2, '4') => {
+                    let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                    let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+                    
+                    let sum = self.cpu.regs[reg_i1].overflowing_add(self.cpu.regs[reg_i2]);
+                    self.cpu.regs[reg_i1] = sum.0;
+                    self.cpu.regs[15] = match sum.1 {
+                        true => 1,
+                        false => 0,
+                    }
+                }
                 ('8', r1, _r2, '6') => {
                     let reg_i = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
                     if self.cpu.regs[reg_i] & 0b1 == 1 {
@@ -252,6 +263,15 @@ impl Emulator for Chip8Emulator {
                     }
                     self.cpu.regs[reg_i] = self.cpu.regs[reg_i] << 1;
                     println!("[SLCM]: V{r1} VF = {}", self.cpu.regs[15]);
+                }
+                ('9', r1, r2, '0') => {
+                    let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                    let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+                    println!("[SINE]: {reg_i1} != {reg_i2}");
+                    if self.cpu.regs[reg_i1] != self.cpu.regs[reg_i2] {
+                        println!("      [INFO]: Ignored.");
+                        self.cpu.ip += 2;
+                    }
                 }
                 ('A', n1, n2, n3) => {
                     self.cpu.mem_address =
@@ -307,6 +327,14 @@ impl Emulator for Chip8Emulator {
                     let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
                     println!("[SIKP]: Checking {}", self.cpu.regs[reg_i]);
                     if cur_pressed_keys[self.cpu.regs[reg_i] as usize] {
+                        self.cpu.ip += 2;
+                        println!("        [INFO]: Skipped")
+                    }
+                }
+                ('E', r, 'A', '1') => {
+                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                    println!("[SINP]: Checking {}", self.cpu.regs[reg_i]);
+                    if !cur_pressed_keys[self.cpu.regs[reg_i] as usize] {
                         self.cpu.ip += 2;
                         println!("        [INFO]: Skipped")
                     }
