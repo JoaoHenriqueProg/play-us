@@ -3,6 +3,7 @@ use std::fs;
 use std::env;
 use emulator::Emulator;
 
+mod video;
 mod emulator;
 mod chip8;
 
