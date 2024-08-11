@@ -2,6 +2,7 @@ use crate::video;
 use crate::{emulator::Emulator, video::Screen};
 use rand::Rng;
 use sdl2::event::Event;
+use sdl2::keyboard::Keycode;
 use sdl2::pixels::{self, Color, PixelFormatEnum};
 use sdl2::rect::Rect;
 
@@ -26,6 +27,7 @@ impl Emulator for Chip8Emulator {
         let mut screen_bits = [false; 64 * 32];
 
         self.memory[512..512 + rom.len()].copy_from_slice(&rom);
+        let mut cur_pressed_keys = [false; 16];
         // let mut steps = 19;
         'main_loop: loop {
             // if self.cpu.ip % 2 != 0 {
@@ -41,9 +43,56 @@ impl Emulator for Chip8Emulator {
             for event in screen.event_pump.poll_iter() {
                 match event {
                     Event::Quit { .. } => break 'main_loop,
+                    Event::KeyDown { keycode, .. } => {
+                        if let Some(keycode) = keycode {
+                            match keycode {
+                                Keycode::NUM_1 => cur_pressed_keys[1] = true,
+                                Keycode::NUM_2 => cur_pressed_keys[2] = true,
+                                Keycode::NUM_3 => cur_pressed_keys[3] = true,
+                                Keycode::Q => cur_pressed_keys[4] = true,
+                                Keycode::W => cur_pressed_keys[5] = true,
+                                Keycode::E => cur_pressed_keys[6] = true,
+                                Keycode::A => cur_pressed_keys[7] = true,
+                                Keycode::S => cur_pressed_keys[8] = true,
+                                Keycode::D => cur_pressed_keys[9] = true,
+                                Keycode::X => cur_pressed_keys[0] = true,
+                                Keycode::Z => cur_pressed_keys[10] = true,
+                                Keycode::C => cur_pressed_keys[11] = true,
+                                Keycode::NUM_4 => cur_pressed_keys[12] = true,
+                                Keycode::R => cur_pressed_keys[13] = true,
+                                Keycode::F => cur_pressed_keys[14] = true,
+                                Keycode::V => cur_pressed_keys[15] = true,
+                                _ => {}
+                            }
+                        }
+                    }
+                    Event::KeyUp { keycode, .. } => {
+                        if let Some(keycode) = keycode {
+                            match keycode {
+                                Keycode::NUM_1 => cur_pressed_keys[1] = false,
+                                Keycode::NUM_2 => cur_pressed_keys[2] = false,
+                                Keycode::NUM_3 => cur_pressed_keys[3] = false,
+                                Keycode::Q => cur_pressed_keys[4] = false,
+                                Keycode::W => cur_pressed_keys[5] = false,
+                                Keycode::E => cur_pressed_keys[6] = false,
+                                Keycode::A => cur_pressed_keys[7] = false,
+                                Keycode::S => cur_pressed_keys[8] = false,
+                                Keycode::D => cur_pressed_keys[9] = false,
+                                Keycode::X => cur_pressed_keys[0] = false,
+                                Keycode::Z => cur_pressed_keys[10] = false,
+                                Keycode::C => cur_pressed_keys[11] = false,
+                                Keycode::NUM_4 => cur_pressed_keys[12] = false,
+                                Keycode::R => cur_pressed_keys[13] = false,
+                                Keycode::F => cur_pressed_keys[14] = false,
+                                Keycode::V => cur_pressed_keys[15] = false,
+                                _ => {}
+                            }
+                        }
+                    }
                     _ => {}
                 }
             }
+            // println!("KEYS PRESSED: {:?}", cur_pressed_keys);
 
             screen.canvas.set_draw_color(Color::BLACK);
             screen.canvas.clear();
@@ -248,10 +297,13 @@ impl Emulator for Chip8Emulator {
 
                     println!("[DSA]");
                 }
-                ('E', k, '9', 'E') => {
-                    let _key_i = usize::from_str_radix(k.to_string().as_str(), 16).unwrap();
-                    println!("[SIKP]: To be completed, key not pressed");
-                    println!("[TODO]: Check if key is pressed");
+                ('E', r, '9', 'E') => {
+                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                    println!("[SIKP]: Checking {}", self.cpu.regs[reg_i]);
+                    if cur_pressed_keys[self.cpu.regs[reg_i] as usize] {
+                        self.cpu.ip += 2;
+                        println!("        [INFO]: Skipped")
+                    }
                 }
                 ('F', n, '1', '8') => {
                     self.st = usize::from_str_radix(n.to_string().as_str(), 16).unwrap();
