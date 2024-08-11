@@ -207,7 +207,7 @@ impl Emulator for Chip8Emulator {
                     let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
                     let value_to_add =
                         u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
-                    self.cpu.regs[reg_i] += value_to_add;
+                    self.cpu.regs[reg_i] = self.cpu.regs[reg_i].wrapping_add(value_to_add);
                     println!("[INCR]: V{reg_i} += {value_to_add}");
                 }
                 ('8', r1, r2, '0') => {
