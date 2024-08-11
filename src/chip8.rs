@@ -18,15 +18,24 @@ pub struct Chip8Emulator {
 
 impl Emulator for Chip8Emulator {
     fn run(&mut self, rom: &[u8]) {
+        self.memory[512..512 + rom.len()].copy_from_slice(&rom);
+        // let mut steps = 19;
         loop {
             // if self.cpu.ip % 2 != 0 {
             //     panic!("God please don't") // Space invader reached here, which means something is wrong
             // }
 
+            // steps -= 1;
+            // if steps == 0  {
+            //     println!("{}", self.cpu.regs[0]);
+            //     break
+            // }
             let hex1 = format!("{:02X}", rom[self.cpu.ip]).chars().nth(0).unwrap();
             let hex2 = format!("{:02X}", rom[self.cpu.ip]).chars().nth(1).unwrap();
             let hex3 = format!("{:02X}", rom[self.cpu.ip + 1]).chars().nth(0).unwrap();
             let hex4 = format!("{:02X}", rom[self.cpu.ip + 1]).chars().nth(1).unwrap();
+
+            print!("{:04X}: ", self.cpu.ip + 512);
             match (hex1, hex2, hex3, hex4) {
                 ('0', '0', 'E', '0') => {
                     println!("[TODO]: Clear screen");
@@ -48,31 +57,32 @@ impl Emulator for Chip8Emulator {
                     self.sp += 1;
                     self.cpu.ip = usize::from_str_radix(format!("{}{}{}", n1, n2, n3).as_str(), 16).unwrap() - 512;
                     // * divided by two because a instruction is two bytes?
+                    println!("[CALL] {}", self.cpu.ip);
                     continue // does not increment counter
                 }
                 ('3', r, n1, n2) => {
                     let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    println!("[IINE]: V{:?}", r); // Ignore if not equal
+                    println!("[IINE]: V{} != {}", r, self.cpu.regs[reg_i]); // Ignore if not equal
                     let value_to_check = u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
                     if self.cpu.regs[reg_i] == value_to_check {
                         self.cpu.ip += 2;
-                        println!("[INFO]: Ignored.");
+                        println!("  [INFO]: Ignored.");
                     }
                 }
                 ('4', r, n1, n2) => {
                     let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
                     let value_to_check = u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
-                    println!("[IIE ]: V{} == {}", reg_i, value_to_check); // Ignore if equal
+                    println!("[IIE ]: V{} {} == {}", reg_i, self.cpu.regs[reg_i], value_to_check); // Ignore if equal
                     if self.cpu.regs[reg_i] != value_to_check {
                         self.cpu.ip += 2;
-                        println!("[INFO]: Ignored.");
+                        println!("  [INFO]: Ignored.");
                     }
                 }
                 ('6', r, n1, n2) => {
                     let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
                     let value_to_set = u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
                     self.cpu.regs[reg_i] = value_to_set;
-                    println!("[MSET]: {:?} at V{}", value_to_set, reg_i);
+                    println!("[MSET]: {} at V{}", self.cpu.regs[reg_i], reg_i);
                 }
                 ('7', r, n1, n2) => {
                     let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
@@ -168,6 +178,7 @@ impl Emulator for Chip8Emulator {
                         self.cpu.regs[i] = self.memory[(self.cpu.mem_address + i as u16) as usize];
                     }
                     println!("[RRD ]: To V{reg_i} at {}", self.cpu.mem_address);
+                    // ! WASN'T WORKING CORRECTLY BECAUSE THE EMULATOR DIDN'T DUMP THE ROM INTO THE RAM, SO IT JUST COPIED A BUNCH OF ZEROS
                 }
                 _ => todo!("HEX: {}{}{}{}\nIP: {}", hex1, hex2, hex3, hex4, self.cpu.ip)
             }
