@@ -365,6 +365,25 @@ impl Emulator for Chip8Emulator {
                     self.cpu.regs[reg_i] = self.dt as u8;
                     println!("[SRDT]: V{reg_i} = DT = {}", self.dt);
                 }
+                ('F', r, '0', 'A') => {
+                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                    println!("[WFI ]: V{reg_i}");
+                    let mut was_pressed = false;
+                    for (value, pressed) in cur_pressed_keys.iter().enumerate() {
+                        if *pressed {
+                            self.cpu.regs[reg_i] = value as u8;
+                            was_pressed = true;
+                        }
+                    }
+                    if !was_pressed {
+                        continue
+                    }
+                }
+                ('F', r, '1', '5') => {
+                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                    self.dt = self.cpu.regs[reg_i] as usize;
+                    println!("[SDTR]: DT = V{reg_i} = {}", self.dt);
+                }
                 ('F', n, '1', '8') => {
                     self.st = usize::from_str_radix(n.to_string().as_str(), 16).unwrap();
                     println!("[STST]: Sound timer = {}", self.st);
