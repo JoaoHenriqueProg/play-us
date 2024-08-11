@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use crate::video;
 use crate::{emulator::Emulator, video::Screen};
 use rand::Rng;
@@ -29,6 +31,7 @@ impl Emulator for Chip8Emulator {
         self.memory[512..512 + rom.len()].copy_from_slice(&rom);
         let mut cur_pressed_keys = [false; 16];
         // let mut steps = 19;
+        let mut timers_timer = Instant::now();
         'main_loop: loop {
             // if self.cpu.ip % 2 != 0 {
             //     panic!("God please don't") // Space invader reached here, which means something is wrong
@@ -39,6 +42,12 @@ impl Emulator for Chip8Emulator {
             //     println!("{}", self.cpu.regs[0]);
             //     break
             // }
+            if timers_timer.elapsed().as_millis() > 1000 / 60 {
+                // the timers go down one each 1/60 of a second
+                self.dt = self.dt.saturating_sub(1);
+                self.st = self.st.saturating_sub(1);
+                timers_timer = Instant::now();
+            }
 
             for event in screen.event_pump.poll_iter() {
                 match event {
