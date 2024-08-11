@@ -211,6 +211,12 @@ impl Emulator for Chip8Emulator {
                     println!("[CPXY]: V{r1} = V{r2} = {}", self.cpu.regs[reg_i2]);
                     self.cpu.regs[reg_i1] = self.cpu.regs[reg_i2];
                 }
+                ('8', r1, r2, '1') => {
+                    let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                    let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+                    println!("[ORR ]: V{r1} | V{r2} = {:08b} | {:08b} = {:08b}", self.cpu.regs[reg_i1], self.cpu.regs[reg_i2], self.cpu.regs[reg_i1] | self.cpu.regs[reg_i2]);
+                    self.cpu.regs[reg_i1] = self.cpu.regs[reg_i2] | self.cpu.regs[reg_i1];
+                }
                 ('8', r1, r2, '2') => {
                     let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
                     let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
@@ -338,6 +344,11 @@ impl Emulator for Chip8Emulator {
                         self.cpu.ip += 2;
                         println!("        [INFO]: Skipped")
                     }
+                }
+                ('F', r, '0', '7') => {
+                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                    self.cpu.regs[reg_i] = self.dt as u8;
+                    println!("[SRDT]: V{reg_i} = DT = {}", self.dt);
                 }
                 ('F', n, '1', '8') => {
                     self.st = usize::from_str_radix(n.to_string().as_str(), 16).unwrap();
