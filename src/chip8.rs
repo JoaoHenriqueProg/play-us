@@ -229,10 +229,12 @@ impl Emulator for Chip8Emulator {
 
                     // TODO: Handle screen wraping
                     for y in pos_y..pos_y + height {
-                        let cur_line = self.memory[self.cpu.mem_address as usize + 8 * (y - pos_y)];
+                        let cur_line = self.memory[self.cpu.mem_address as usize + y - pos_y];
                         // trying my best to not do the most convoluted mess ever written
                         for x in pos_x..pos_x + 8 {
-                            let local_x = x - pos_x;
+                            let mut local_x = x - pos_x;
+                            local_x = 7 - local_x;
+
                             let sprite_pixel = ((cur_line >> local_x) & 1) != 0;
                             let cur_screen_pixel = screen_bits[x + y * 64];
                             let new_pixel = (sprite_pixel || cur_screen_pixel)
