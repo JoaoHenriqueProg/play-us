@@ -96,23 +96,28 @@ impl Emulator for Chip8Emulator {
 
             screen.canvas.set_draw_color(Color::BLACK);
             screen.canvas.clear();
+            let mut rects = vec![];
             for pixel_y in 0..32 {
                 for pixel_x in 0..64 {
-                    let clr = match screen_bits[pixel_x + pixel_y * 64] {
-                        true => Color::WHITE,
-                        false => Color::BLACK,
-                    };
+                    // let clr = match screen_bits[pixel_x + pixel_y * 64] {
+                    //     true => Color::WHITE,
+                    //     false => Color::BLACK,
+                    // };
 
-                    screen.canvas.set_draw_color(clr);
-                    let rect = Rect::new(pixel_x as i32 * 8, pixel_y as i32 * 8, 8, 8);
-                    // if clr.r == 255 {
-                    //     println!("{:?} at {:?}", clr, rect);
-                    // }
-                    match screen.canvas.fill_rect(rect) {
-                        Ok(_) => {}
-                        Err(err) => panic!("{}", err),
+                    // screen.canvas.set_draw_color(clr);
+                    if screen_bits[pixel_x + pixel_y * 64] {
+                        let rect = Rect::new(pixel_x as i32 * 8, pixel_y as i32 * 8, 8, 8);
+                        // if clr.r == 255 {
+                        //     println!("{:?} at {:?}", clr, rect);
+                        // }
+                        rects.push(rect);
                     }
                 }
+            }
+            screen.canvas.set_draw_color(Color::WHITE);
+            match screen.canvas.fill_rects(&rects) {
+                Ok(_) => {}
+                Err(err) => panic!("{}", err),
             }
             screen.canvas.present();
             // for pixel_y in 0..32 {
@@ -214,7 +219,12 @@ impl Emulator for Chip8Emulator {
                 ('8', r1, r2, '1') => {
                     let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
                     let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
-                    println!("[ORR ]: V{r1} | V{r2} = {:08b} | {:08b} = {:08b}", self.cpu.regs[reg_i1], self.cpu.regs[reg_i2], self.cpu.regs[reg_i1] | self.cpu.regs[reg_i2]);
+                    println!(
+                        "[ORR ]: V{r1} | V{r2} = {:08b} | {:08b} = {:08b}",
+                        self.cpu.regs[reg_i1],
+                        self.cpu.regs[reg_i2],
+                        self.cpu.regs[reg_i1] | self.cpu.regs[reg_i2]
+                    );
                     self.cpu.regs[reg_i1] = self.cpu.regs[reg_i2] | self.cpu.regs[reg_i1];
                 }
                 ('8', r1, r2, '2') => {
@@ -242,7 +252,7 @@ impl Emulator for Chip8Emulator {
                 ('8', r1, r2, '4') => {
                     let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
                     let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
-                    
+
                     let sum = self.cpu.regs[reg_i1].overflowing_add(self.cpu.regs[reg_i2]);
                     self.cpu.regs[reg_i1] = sum.0;
                     self.cpu.regs[15] = match sum.1 {
