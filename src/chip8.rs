@@ -184,12 +184,12 @@ impl Emulator for Chip8Emulator {
                 }
                 ('3', r, n1, n2) => {
                     let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    println!("[IINE]: V{} != {}", r, self.cpu.regs[reg_i]); // Ignore if not equal
+                    println!("[IIE ]: V{r} {} == {}", self.cpu.regs[reg_i], self.cpu.regs[reg_i]); // Ignore if not equal
                     let value_to_check =
                         u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
                     if self.cpu.regs[reg_i] == value_to_check {
                         self.cpu.ip += 2;
-                        println!("  [INFO]: Ignored.");
+                        println!("        [INFO]: Ignored.");
                     }
                 }
                 ('4', r, n1, n2) => {
@@ -197,7 +197,7 @@ impl Emulator for Chip8Emulator {
                     let value_to_check =
                         u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
                     println!(
-                        "[IIE ]: V{} {} == {}",
+                        "[IINE]: V{} {} != {}",
                         reg_i, self.cpu.regs[reg_i], value_to_check
                     ); // Ignore if equal
                     if self.cpu.regs[reg_i] != value_to_check {
@@ -354,7 +354,7 @@ impl Emulator for Chip8Emulator {
                 }
                 ('E', r, 'A', '1') => {
                     let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    println!("[SINP]: Checking {}", self.cpu.regs[reg_i]);
+                    println!("[SINP]: Checking {}", self.cpu.regs[reg_i]); // skip if not pressed
                     if !cur_pressed_keys[self.cpu.regs[reg_i] as usize] {
                         self.cpu.ip += 2;
                         println!("        [INFO]: Skipped")
