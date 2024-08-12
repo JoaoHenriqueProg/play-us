@@ -30,18 +30,8 @@ impl Emulator for Chip8Emulator {
 
         self.memory[512..512 + rom.len()].copy_from_slice(&rom);
         let mut cur_pressed_keys = [false; 16];
-        // let mut steps = 19;
         let mut timers_timer = Instant::now();
         'main_loop: loop {
-            // if self.cpu.ip % 2 != 0 {
-            //     panic!("God please don't") // Space invader reached here, which means something is wrong
-            // }
-
-            // steps -= 1;
-            // if steps == 0  {
-            //     println!("{}", self.cpu.regs[0]);
-            //     break
-            // }
             if timers_timer.elapsed().as_millis() > 1000 / 60 {
                 // the timers go down one each 1/60 of a second
                 self.dt = self.dt.saturating_sub(1);
@@ -101,24 +91,13 @@ impl Emulator for Chip8Emulator {
                     _ => {}
                 }
             }
-            // println!("KEYS PRESSED: {:?}", cur_pressed_keys);
-
             screen.canvas.set_draw_color(Color::BLACK);
             screen.canvas.clear();
             let mut rects = vec![];
             for pixel_y in 0..32 {
                 for pixel_x in 0..64 {
-                    // let clr = match screen_bits[pixel_x + pixel_y * 64] {
-                    //     true => Color::WHITE,
-                    //     false => Color::BLACK,
-                    // };
-
-                    // screen.canvas.set_draw_color(clr);
                     if screen_bits[pixel_x + pixel_y * 64] {
                         let rect = Rect::new(pixel_x as i32 * 8, pixel_y as i32 * 8, 8, 8);
-                        // if clr.r == 255 {
-                        //     println!("{:?} at {:?}", clr, rect);
-                        // }
                         rects.push(rect);
                     }
                 }
@@ -129,18 +108,6 @@ impl Emulator for Chip8Emulator {
                 Err(err) => panic!("{}", err),
             }
             screen.canvas.present();
-            // for pixel_y in 0..32 {
-            //     for pixel_x in 0..64 {
-            //         let clr = match screen_bits[pixel_x + pixel_y * 64] {
-            //             true => 1,
-            //             false => 0,
-            //         };
-
-            //         print!("{clr}");
-            //     }
-            //     println!();
-            // }
-
             
             print!("{:04X}: ", self.cpu.ip + 512);
             let frame_start = Instant::now();
