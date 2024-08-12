@@ -141,315 +141,328 @@ impl Emulator for Chip8Emulator {
             //     println!();
             // }
 
-            let hex1 = format!("{:02X}", rom[self.cpu.ip]).chars().nth(0).unwrap();
-            let hex2 = format!("{:02X}", rom[self.cpu.ip]).chars().nth(1).unwrap();
-            let hex3 = format!("{:02X}", rom[self.cpu.ip + 1])
-                .chars()
-                .nth(0)
-                .unwrap();
-            let hex4 = format!("{:02X}", rom[self.cpu.ip + 1])
-                .chars()
-                .nth(1)
-                .unwrap();
-
+            
             print!("{:04X}: ", self.cpu.ip + 512);
-            match (hex1, hex2, hex3, hex4) {
-                ('0', '0', 'E', '0') => {
-                    screen_bits = [false; 64 * 32];
-                    println!("[CLRS]")
-                }
-                ('0', '0', 'E', 'E') => {
-                    println!("[RET]");
-                    self.sp -= 1;
-                    self.cpu.ip = self.stack[self.sp] as usize;
-                }
-                ('1', n1, n2, n3) => {
-                    self.cpu.ip = usize::from_str_radix(format!("{}{}{}", n1, n2, n3).as_str(), 16)
-                        .unwrap()
-                        - 512;
-                    // The game code should be in memory, so we subtract its offset
-                    // Maybe will have to move the game code into memory in the future
-                    println!("[JUMP]: {:?}", self.cpu.ip);
-                    continue; // does not increment counter
-                }
-                ('2', n1, n2, n3) => {
-                    self.stack[self.sp] = self.cpu.ip as u16;
-                    self.sp += 1;
-                    self.cpu.ip = usize::from_str_radix(format!("{}{}{}", n1, n2, n3).as_str(), 16)
-                        .unwrap()
-                        - 512;
-                    // * divided by two because a instruction is two bytes?
-                    println!("[CALL] {}", self.cpu.ip);
-                    continue; // does not increment counter
-                }
-                ('3', r, n1, n2) => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    println!("[IIE ]: V{r} {} == {}", self.cpu.regs[reg_i], self.cpu.regs[reg_i]); // Ignore if not equal
-                    let value_to_check =
-                        u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
-                    if self.cpu.regs[reg_i] == value_to_check {
-                        self.cpu.ip += 2;
-                        println!("        [INFO]: Ignored.");
-                    }
-                }
-                ('4', r, n1, n2) => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    let value_to_check =
-                        u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
-                    println!(
-                        "[IINE]: V{} {} != {}",
-                        reg_i, self.cpu.regs[reg_i], value_to_check
-                    ); // Ignore if equal
-                    if self.cpu.regs[reg_i] != value_to_check {
-                        self.cpu.ip += 2;
-                        println!("  [INFO]: Ignored.");
-                    }
-                }
-                ('6', r, n1, n2) => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    let value_to_set =
-                        u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
-                    self.cpu.regs[reg_i] = value_to_set;
-                    println!("[MSET]: {} at V{}", self.cpu.regs[reg_i], reg_i);
-                }
-                ('7', r, n1, n2) => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    let value_to_add =
-                        u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
-                    self.cpu.regs[reg_i] = self.cpu.regs[reg_i].wrapping_add(value_to_add);
-                    println!("[INCR]: V{reg_i} += {value_to_add}");
-                }
-                ('8', r1, r2, '0') => {
-                    let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
-                    let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
-                    println!("[CPXY]: V{r1} = V{r2} = {}", self.cpu.regs[reg_i2]);
-                    self.cpu.regs[reg_i1] = self.cpu.regs[reg_i2];
-                }
-                ('8', r1, r2, '1') => {
-                    let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
-                    let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
-                    println!(
-                        "[ORR ]: V{r1} | V{r2} = {:08b} | {:08b} = {:08b}",
-                        self.cpu.regs[reg_i1],
-                        self.cpu.regs[reg_i2],
-                        self.cpu.regs[reg_i1] | self.cpu.regs[reg_i2]
-                    );
-                    self.cpu.regs[reg_i1] = self.cpu.regs[reg_i2] | self.cpu.regs[reg_i1];
-                }
-                ('8', r1, r2, '2') => {
-                    let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
-                    let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
-                    println!(
-                        "[ANDR]: V{r1} = V{r1} & V{r2} = {:08b} & {:08b} = {:08b}",
-                        self.cpu.regs[reg_i1],
-                        self.cpu.regs[reg_i2],
-                        self.cpu.regs[reg_i1] & self.cpu.regs[reg_i2]
-                    );
-                    self.cpu.regs[reg_i1] = self.cpu.regs[reg_i1] & self.cpu.regs[reg_i2];
-                }
-                ('8', r1, r2, '3') => {
-                    let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
-                    let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
-                    println!(
-                        "[XORR]: V{r1} = V{r1} ^ V{r2} = {:08b} ^ {:08b} = {:08b}",
-                        self.cpu.regs[reg_i1],
-                        self.cpu.regs[reg_i2],
-                        self.cpu.regs[reg_i1] ^ self.cpu.regs[reg_i2]
-                    );
-                    self.cpu.regs[reg_i1] = self.cpu.regs[reg_i1] ^ self.cpu.regs[reg_i2];
-                }
-                ('8', r1, r2, '4') => {
-                    let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
-                    let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+            let frame_start = Instant::now();
+            
+            for _ in 0..750 / 60 {
+                let hex1 = format!("{:02X}", rom[self.cpu.ip]).chars().nth(0).unwrap();
+                let hex2 = format!("{:02X}", rom[self.cpu.ip]).chars().nth(1).unwrap();
+                let hex3 = format!("{:02X}", rom[self.cpu.ip + 1])
+                    .chars()
+                    .nth(0)
+                    .unwrap();
+                let hex4 = format!("{:02X}", rom[self.cpu.ip + 1])
+                    .chars()
+                    .nth(1)
+                    .unwrap();
 
-                    let sum = self.cpu.regs[reg_i1].overflowing_add(self.cpu.regs[reg_i2]);
-                    self.cpu.regs[reg_i1] = sum.0;
-                    self.cpu.regs[15] = match sum.1 {
-                        true => 1,
-                        false => 0,
-                    };
-                    println!("[ADDC]");
-                }
-                ('8', r1, r2, '5') => {
-                    let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
-                    let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+                match (hex1, hex2, hex3, hex4) {
+                    ('0', '0', 'E', '0') => {
+                        screen_bits = [false; 64 * 32];
+                        println!("[CLRS]")
+                    }
+                    ('0', '0', 'E', 'E') => {
+                        println!("[RET]");
+                        self.sp -= 1;
+                        self.cpu.ip = self.stack[self.sp] as usize;
+                    }
+                    ('1', n1, n2, n3) => {
+                        self.cpu.ip =
+                            usize::from_str_radix(format!("{}{}{}", n1, n2, n3).as_str(), 16)
+                                .unwrap()
+                                - 512;
+                        // The game code should be in memory, so we subtract its offset
+                        // Maybe will have to move the game code into memory in the future
+                        println!("[JUMP]: {:?}", self.cpu.ip);
+                        continue; // does not increment counter
+                    }
+                    ('2', n1, n2, n3) => {
+                        self.stack[self.sp] = self.cpu.ip as u16;
+                        self.sp += 1;
+                        self.cpu.ip =
+                            usize::from_str_radix(format!("{}{}{}", n1, n2, n3).as_str(), 16)
+                                .unwrap()
+                                - 512;
+                        // * divided by two because a instruction is two bytes?
+                        println!("[CALL] {}", self.cpu.ip);
+                        continue; // does not increment counter
+                    }
+                    ('3', r, n1, n2) => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        println!(
+                            "[IIE ]: V{r} {} == {}",
+                            self.cpu.regs[reg_i], self.cpu.regs[reg_i]
+                        ); // Ignore if not equal
+                        let value_to_check =
+                            u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
+                        if self.cpu.regs[reg_i] == value_to_check {
+                            self.cpu.ip += 2;
+                            println!("        [INFO]: Ignored.");
+                        }
+                    }
+                    ('4', r, n1, n2) => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        let value_to_check =
+                            u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
+                        println!(
+                            "[IINE]: V{} {} != {}",
+                            reg_i, self.cpu.regs[reg_i], value_to_check
+                        ); // Ignore if equal
+                        if self.cpu.regs[reg_i] != value_to_check {
+                            self.cpu.ip += 2;
+                            println!("  [INFO]: Ignored.");
+                        }
+                    }
+                    ('6', r, n1, n2) => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        let value_to_set =
+                            u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
+                        self.cpu.regs[reg_i] = value_to_set;
+                        println!("[MSET]: {} at V{}", self.cpu.regs[reg_i], reg_i);
+                    }
+                    ('7', r, n1, n2) => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        let value_to_add =
+                            u8::from_str_radix(format!("{}{}", n1, n2).as_str(), 16).unwrap();
+                        self.cpu.regs[reg_i] = self.cpu.regs[reg_i].wrapping_add(value_to_add);
+                        println!("[INCR]: V{reg_i} += {value_to_add}");
+                    }
+                    ('8', r1, r2, '0') => {
+                        let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                        let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+                        println!("[CPXY]: V{r1} = V{r2} = {}", self.cpu.regs[reg_i2]);
+                        self.cpu.regs[reg_i1] = self.cpu.regs[reg_i2];
+                    }
+                    ('8', r1, r2, '1') => {
+                        let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                        let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+                        println!(
+                            "[ORR ]: V{r1} | V{r2} = {:08b} | {:08b} = {:08b}",
+                            self.cpu.regs[reg_i1],
+                            self.cpu.regs[reg_i2],
+                            self.cpu.regs[reg_i1] | self.cpu.regs[reg_i2]
+                        );
+                        self.cpu.regs[reg_i1] = self.cpu.regs[reg_i2] | self.cpu.regs[reg_i1];
+                    }
+                    ('8', r1, r2, '2') => {
+                        let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                        let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+                        println!(
+                            "[ANDR]: V{r1} = V{r1} & V{r2} = {:08b} & {:08b} = {:08b}",
+                            self.cpu.regs[reg_i1],
+                            self.cpu.regs[reg_i2],
+                            self.cpu.regs[reg_i1] & self.cpu.regs[reg_i2]
+                        );
+                        self.cpu.regs[reg_i1] = self.cpu.regs[reg_i1] & self.cpu.regs[reg_i2];
+                    }
+                    ('8', r1, r2, '3') => {
+                        let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                        let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+                        println!(
+                            "[XORR]: V{r1} = V{r1} ^ V{r2} = {:08b} ^ {:08b} = {:08b}",
+                            self.cpu.regs[reg_i1],
+                            self.cpu.regs[reg_i2],
+                            self.cpu.regs[reg_i1] ^ self.cpu.regs[reg_i2]
+                        );
+                        self.cpu.regs[reg_i1] = self.cpu.regs[reg_i1] ^ self.cpu.regs[reg_i2];
+                    }
+                    ('8', r1, r2, '4') => {
+                        let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                        let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
 
-                    let sub = self.cpu.regs[reg_i1].overflowing_sub(self.cpu.regs[reg_i2]);
-                    self.cpu.regs[reg_i1] = sub.0;
-                    self.cpu.regs[15] = match sub.1 {
-                        true => 0,
-                        false => 1,
-                    };
-                    println!("[SUBC]"); // sub wrap carry if not borrow
-                }
-                ('8', r1, _r2, '6') => {
-                    let reg_i = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
-                    if self.cpu.regs[reg_i] & 0b1 == 1 {
-                        self.cpu.regs[15] = 1;
-                    } else {
+                        let sum = self.cpu.regs[reg_i1].overflowing_add(self.cpu.regs[reg_i2]);
+                        self.cpu.regs[reg_i1] = sum.0;
+                        self.cpu.regs[15] = match sum.1 {
+                            true => 1,
+                            false => 0,
+                        };
+                        println!("[ADDC]");
+                    }
+                    ('8', r1, r2, '5') => {
+                        let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                        let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+
+                        let sub = self.cpu.regs[reg_i1].overflowing_sub(self.cpu.regs[reg_i2]);
+                        self.cpu.regs[reg_i1] = sub.0;
+                        self.cpu.regs[15] = match sub.1 {
+                            true => 0,
+                            false => 1,
+                        };
+                        println!("[SUBC]"); // sub wrap carry if not borrow
+                    }
+                    ('8', r1, _r2, '6') => {
+                        let reg_i = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                        if self.cpu.regs[reg_i] & 0b1 == 1 {
+                            self.cpu.regs[15] = 1;
+                        } else {
+                            self.cpu.regs[15] = 0;
+                        }
+                        self.cpu.regs[reg_i] = self.cpu.regs[reg_i] >> 1;
+                        println!("[SRCL]: V{r1} VF = {}", self.cpu.regs[15]);
+                    }
+                    ('8', r1, _r2, 'E') => {
+                        let reg_i = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                        if self.cpu.regs[reg_i] & 0b10000000 == 0b10000000 {
+                            self.cpu.regs[15] = 1;
+                        } else {
+                            self.cpu.regs[15] = 0;
+                        }
+                        self.cpu.regs[reg_i] = self.cpu.regs[reg_i] << 1;
+                        println!("[SLCM]: V{r1} VF = {}", self.cpu.regs[15]);
+                    }
+                    ('9', r1, r2, '0') => {
+                        let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
+                        let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
+                        println!("[SINE]: {reg_i1} != {reg_i2}");
+                        if self.cpu.regs[reg_i1] != self.cpu.regs[reg_i2] {
+                            println!("      [INFO]: Ignored.");
+                            self.cpu.ip += 2;
+                        }
+                    }
+                    ('A', n1, n2, n3) => {
+                        self.cpu.mem_address =
+                            u16::from_str_radix(format!("{}{}{}", n1, n2, n3).as_str(), 16)
+                                .unwrap();
+                        println!("[MPST]: {}", self.cpu.mem_address);
+                    }
+                    ('C', r, k1, k2) => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        let mut rng = rand::thread_rng();
+                        let value_to_and =
+                            u8::from_str_radix(format!("{}{}", k1, k2).as_str(), 16).unwrap();
+                        let n: u8 = rng.gen::<u8>() & value_to_and;
+                        self.cpu.regs[reg_i] = n;
+                        println!("[RAND]: {r}");
+                    }
+                    ('D', x, y, n) => {
+                        let height = usize::from_str_radix(n.to_string().as_str(), 16).unwrap();
+                        let reg_x = u8::from_str_radix(x.to_string().as_str(), 16).unwrap();
+                        let reg_y = u8::from_str_radix(y.to_string().as_str(), 16).unwrap();
+                        let pos_x = self.cpu.regs[reg_x as usize] as usize;
+                        let pos_y = self.cpu.regs[reg_y as usize] as usize;
+
                         self.cpu.regs[15] = 0;
-                    }
-                    self.cpu.regs[reg_i] = self.cpu.regs[reg_i] >> 1;
-                    println!("[SRCL]: V{r1} VF = {}", self.cpu.regs[15]);
-                }
-                ('8', r1, _r2, 'E') => {
-                    let reg_i = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
-                    if self.cpu.regs[reg_i] & 0b10000000 == 0b10000000 {
-                        self.cpu.regs[15] = 1;
-                    } else {
-                        self.cpu.regs[15] = 0;
-                    }
-                    self.cpu.regs[reg_i] = self.cpu.regs[reg_i] << 1;
-                    println!("[SLCM]: V{r1} VF = {}", self.cpu.regs[15]);
-                }
-                ('9', r1, r2, '0') => {
-                    let reg_i1 = usize::from_str_radix(r1.to_string().as_str(), 16).unwrap();
-                    let reg_i2 = usize::from_str_radix(r2.to_string().as_str(), 16).unwrap();
-                    println!("[SINE]: {reg_i1} != {reg_i2}");
-                    if self.cpu.regs[reg_i1] != self.cpu.regs[reg_i2] {
-                        println!("      [INFO]: Ignored.");
-                        self.cpu.ip += 2;
-                    }
-                }
-                ('A', n1, n2, n3) => {
-                    self.cpu.mem_address =
-                        u16::from_str_radix(format!("{}{}{}", n1, n2, n3).as_str(), 16).unwrap();
-                    println!("[MPST]: {}", self.cpu.mem_address);
-                }
-                ('C', r, k1, k2) => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    let mut rng = rand::thread_rng();
-                    let value_to_and =
-                        u8::from_str_radix(format!("{}{}", k1, k2).as_str(), 16).unwrap();
-                    let n: u8 = rng.gen::<u8>() & value_to_and;
-                    self.cpu.regs[reg_i] = n;
-                    println!("[RAND]: {r}");
-                }
-                ('D', x, y, n) => {
-                    let height = usize::from_str_radix(n.to_string().as_str(), 16).unwrap();
-                    let reg_x = u8::from_str_radix(x.to_string().as_str(), 16).unwrap();
-                    let reg_y = u8::from_str_radix(y.to_string().as_str(), 16).unwrap();
-                    let pos_x = self.cpu.regs[reg_x as usize] as usize;
-                    let pos_y = self.cpu.regs[reg_y as usize] as usize;
 
-                    self.cpu.regs[15] = 0;
+                        // TODO: Handle screen wraping
+                        for mut y in pos_y..pos_y + height {
+                            let cur_line = self.memory[self.cpu.mem_address as usize + y - pos_y];
+                            // trying my best to not do the most convoluted mess ever written
+                            for mut x in pos_x..pos_x + 8 {
+                                let mut local_x = x - pos_x;
+                                local_x = 7 - local_x;
 
-                    // TODO: Handle screen wraping
-                    for mut y in pos_y..pos_y + height {
-                        let cur_line = self.memory[self.cpu.mem_address as usize + y - pos_y];
-                        // trying my best to not do the most convoluted mess ever written
-                        for mut x in pos_x..pos_x + 8 {
-                            let mut local_x = x - pos_x;
-                            local_x = 7 - local_x;
-
-                            let sprite_pixel = ((cur_line >> local_x) & 1) != 0;
-                            x = x % 64;
-                            y = y % 32;
-                            let cur_screen_pixel = screen_bits[x + y * 64];
-                            let new_pixel = (sprite_pixel || cur_screen_pixel)
-                                && !(sprite_pixel && cur_screen_pixel);
-                            screen_bits[x + y * 64] = new_pixel;
-                            if cur_screen_pixel == true && new_pixel == false {
-                                self.cpu.regs[15] = 1; // collision acontecey
+                                let sprite_pixel = ((cur_line >> local_x) & 1) != 0;
+                                x = x % 64;
+                                y = y % 32;
+                                let cur_screen_pixel = screen_bits[x + y * 64];
+                                let new_pixel = (sprite_pixel || cur_screen_pixel)
+                                    && !(sprite_pixel && cur_screen_pixel);
+                                screen_bits[x + y * 64] = new_pixel;
+                                if cur_screen_pixel == true && new_pixel == false {
+                                    self.cpu.regs[15] = 1; // collision acontecey
+                                }
                             }
                         }
-                    }
 
-                    println!("[DSA]");
-                }
-                ('E', r, '9', 'E') => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    println!("[SIKP]: Checking {}", self.cpu.regs[reg_i]);
-                    if cur_pressed_keys[self.cpu.regs[reg_i] as usize] {
-                        self.cpu.ip += 2;
-                        println!("        [INFO]: Skipped")
+                        println!("[DSA]");
                     }
-                }
-                ('E', r, 'A', '1') => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    println!("[SINP]: Checking {}", self.cpu.regs[reg_i]); // skip if not pressed
-                    if !cur_pressed_keys[self.cpu.regs[reg_i] as usize] {
-                        self.cpu.ip += 2;
-                        println!("        [INFO]: Skipped")
-                    }
-                }
-                ('F', r, '0', '7') => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    self.cpu.regs[reg_i] = self.dt as u8;
-                    println!("[SRDT]: V{reg_i} = DT = {}", self.dt);
-                }
-                ('F', r, '0', 'A') => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    println!("[WFI ]: V{reg_i}");
-                    let mut was_pressed = false;
-                    for (value, pressed) in cur_pressed_keys.iter().enumerate() {
-                        if *pressed {
-                            self.cpu.regs[reg_i] = value as u8;
-                            was_pressed = true;
+                    ('E', r, '9', 'E') => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        println!("[SIKP]: Checking {}", self.cpu.regs[reg_i]);
+                        if cur_pressed_keys[self.cpu.regs[reg_i] as usize] {
+                            self.cpu.ip += 2;
+                            println!("        [INFO]: Skipped")
                         }
                     }
-                    if !was_pressed {
-                        continue
+                    ('E', r, 'A', '1') => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        println!("[SINP]: Checking {}", self.cpu.regs[reg_i]); // skip if not pressed
+                        if !cur_pressed_keys[self.cpu.regs[reg_i] as usize] {
+                            self.cpu.ip += 2;
+                            println!("        [INFO]: Skipped")
+                        }
                     }
-                }
-                ('F', r, '1', '5') => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    self.dt = self.cpu.regs[reg_i] as usize;
-                    println!("[SDTR]: DT = V{reg_i} = {}", self.dt);
-                }
-                ('F', n, '1', '8') => {
-                    self.st = usize::from_str_radix(n.to_string().as_str(), 16).unwrap();
-                    println!("[STST]: Sound timer = {}", self.st);
-                }
-                ('F', r, '1', 'E') => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    self.cpu.mem_address += self.cpu.regs[reg_i] as u16;
-                    println!("[ADDI]: {} from V{reg_i}", self.cpu.regs[reg_i]);
-                }
-                ('F', r, '2', '9') => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    let n = self.cpu.regs[reg_i];
-                    self.cpu.mem_address = n as u16 * 5;
-                    println!("[SITD]: {n} new address = {}", self.cpu.mem_address);
-                }
-                ('F', r, '3', '3') => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    let mem_address = self.cpu.mem_address as usize;
-                    let to_text = format!("{:03}", self.cpu.regs[reg_i]);
-                    self.memory[mem_address] =
-                        to_text.chars().nth(0).unwrap().to_digit(10).unwrap() as u8;
-                    self.memory[mem_address + 1] =
-                        to_text.chars().nth(1).unwrap().to_digit(10).unwrap() as u8;
-                    self.memory[mem_address + 2] =
-                        to_text.chars().nth(2).unwrap().to_digit(10).unwrap() as u8;
-                    println!("[DBCD]: V{reg_i} to {}", self.cpu.mem_address);
-                    println!(
-                        "  [INFO]: Value = {}, in memory = {} {} {}",
-                        self.cpu.regs[reg_i],
-                        self.memory[mem_address],
-                        self.memory[mem_address + 1],
-                        self.memory[mem_address + 2]
-                    );
-                }
-                ('F', r, '5', '5') => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    for i in 0..=reg_i {
-                        self.memory[self.cpu.mem_address as usize + i] = self.cpu.regs[i];
+                    ('F', r, '0', '7') => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        self.cpu.regs[reg_i] = self.dt as u8;
+                        println!("[SRDT]: V{reg_i} = DT = {}", self.dt);
                     }
-                    println!("[RDMP]: V{reg_i} at {}", self.cpu.mem_address);
-                }
-                ('F', r, '6', '5') => {
-                    let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
-                    for i in 0..=reg_i {
-                        // self.memory[self.cpu.mem_address as usize + i] = self.cpu.regs[i];
-                        self.cpu.regs[i] = self.memory[(self.cpu.mem_address + i as u16) as usize];
+                    ('F', r, '0', 'A') => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        println!("[WFI ]: V{reg_i}");
+                        let mut was_pressed = false;
+                        for (value, pressed) in cur_pressed_keys.iter().enumerate() {
+                            if *pressed {
+                                self.cpu.regs[reg_i] = value as u8;
+                                was_pressed = true;
+                            }
+                        }
+                        if !was_pressed {
+                            continue;
+                        }
                     }
-                    println!("[RRD ]: To V{reg_i} at {}", self.cpu.mem_address);
-                    // ! WASN'T WORKING CORRECTLY BECAUSE THE EMULATOR DIDN'T DUMP THE ROM INTO THE RAM, SO IT JUST COPIED A BUNCH OF ZEROS
+                    ('F', r, '1', '5') => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        self.dt = self.cpu.regs[reg_i] as usize;
+                        println!("[SDTR]: DT = V{reg_i} = {}", self.dt);
+                    }
+                    ('F', n, '1', '8') => {
+                        self.st = usize::from_str_radix(n.to_string().as_str(), 16).unwrap();
+                        println!("[STST]: Sound timer = {}", self.st);
+                    }
+                    ('F', r, '1', 'E') => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        self.cpu.mem_address += self.cpu.regs[reg_i] as u16;
+                        println!("[ADDI]: {} from V{reg_i}", self.cpu.regs[reg_i]);
+                    }
+                    ('F', r, '2', '9') => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        let n = self.cpu.regs[reg_i];
+                        self.cpu.mem_address = n as u16 * 5;
+                        println!("[SITD]: {n} new address = {}", self.cpu.mem_address);
+                    }
+                    ('F', r, '3', '3') => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        let mem_address = self.cpu.mem_address as usize;
+                        let to_text = format!("{:03}", self.cpu.regs[reg_i]);
+                        self.memory[mem_address] =
+                            to_text.chars().nth(0).unwrap().to_digit(10).unwrap() as u8;
+                        self.memory[mem_address + 1] =
+                            to_text.chars().nth(1).unwrap().to_digit(10).unwrap() as u8;
+                        self.memory[mem_address + 2] =
+                            to_text.chars().nth(2).unwrap().to_digit(10).unwrap() as u8;
+                        println!("[DBCD]: V{reg_i} to {}", self.cpu.mem_address);
+                        println!(
+                            "  [INFO]: Value = {}, in memory = {} {} {}",
+                            self.cpu.regs[reg_i],
+                            self.memory[mem_address],
+                            self.memory[mem_address + 1],
+                            self.memory[mem_address + 2]
+                        );
+                    }
+                    ('F', r, '5', '5') => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        for i in 0..=reg_i {
+                            self.memory[self.cpu.mem_address as usize + i] = self.cpu.regs[i];
+                        }
+                        println!("[RDMP]: V{reg_i} at {}", self.cpu.mem_address);
+                    }
+                    ('F', r, '6', '5') => {
+                        let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
+                        for i in 0..=reg_i {
+                            // self.memory[self.cpu.mem_address as usize + i] = self.cpu.regs[i];
+                            self.cpu.regs[i] =
+                                self.memory[(self.cpu.mem_address + i as u16) as usize];
+                        }
+                        println!("[RRD ]: To V{reg_i} at {}", self.cpu.mem_address);
+                        // ! WASN'T WORKING CORRECTLY BECAUSE THE EMULATOR DIDN'T DUMP THE ROM INTO THE RAM, SO IT JUST COPIED A BUNCH OF ZEROS
+                    }
+                    _ => todo!("HEX: {}{}{}{}\nIP: {}", hex1, hex2, hex3, hex4, self.cpu.ip),
                 }
-                _ => todo!("HEX: {}{}{}{}\nIP: {}", hex1, hex2, hex3, hex4, self.cpu.ip),
+                self.cpu.ip += 2;
             }
-            self.cpu.ip += 2;
+            while frame_start.elapsed().as_millis() < 1000 / 60 {}
         }
     }
 }
