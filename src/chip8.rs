@@ -71,13 +71,11 @@ pub struct Chip8Emulator {
 
 impl Emulator for Chip8Emulator {
     fn run(&mut self, rom: &[u8]) {
-        let start_time = Instant::now();
         let mut screen = Screen::new();
         let mut screen_bits = [false; 64 * 32];
 
         self.memory[512..512 + rom.len()].copy_from_slice(&rom);
         let mut cur_pressed_keys = [false; 16];
-        let mut timers_timer = Instant::now();
 
         let audio_spec = AudioSpecDesired {
             freq: Some(44100),
@@ -100,21 +98,18 @@ impl Emulator for Chip8Emulator {
         audio_device.pause();
 
         'main_loop: loop {
-            if timers_timer.elapsed().as_millis() > 1000 / 60 {
-                // the timers go down one each 1/60 of a second
-                self.dt = self.dt.saturating_sub(1);
-                self.st = self.st.saturating_sub(1);
-                timers_timer = Instant::now();
+            // the timers go down one each 1/60 of a second
+            self.dt = self.dt.saturating_sub(1);
+            self.st = self.st.saturating_sub(1);
 
-                if audio_device.status() == AudioStatus::Paused && self.st > 0 {
-                    // sound timer was set to something
-                    audio_device.resume();
-                }
+            if audio_device.status() == AudioStatus::Paused && self.st > 0 {
+                // sound timer was set to something
+                audio_device.resume();
+            }
 
-                if audio_device.status() == AudioStatus::Playing && self.st == 0 {
-                    // sound timer arrived at 0
-                    audio_device.pause();
-                }
+            if audio_device.status() == AudioStatus::Playing && self.st == 0 {
+                // sound timer arrived at 0
+                audio_device.pause();
             }
 
             for event in screen.event_pump.poll_iter() {
@@ -466,7 +461,8 @@ impl Emulator for Chip8Emulator {
                     }
                     ('F', n, '1', '8') => {
                         self.st = self.cpu.regs
-                            [usize::from_str_radix(n.to_string().as_str(), 16).unwrap() as usize] as usize;
+                            [usize::from_str_radix(n.to_string().as_str(), 16).unwrap() as usize]
+                            as usize;
                         println!("[STST]: Sound timer = {}", self.st);
                     }
                     ('F', r, '1', 'E') => {
