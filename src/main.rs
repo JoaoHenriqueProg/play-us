@@ -5,17 +5,20 @@ use std::process::exit;
 
 mod chip8;
 mod emulator;
+mod gb;
 mod video;
 
 #[derive(Clone, Copy)]
 enum Emulators {
     Chip8,
+    GameBoy,
 }
 
 impl ToString for Emulators {
     fn to_string(&self) -> String {
         match self {
             Emulators::Chip8 => "Chip8 emulator".to_string(),
+            Emulators::GameBoy => "GameBoy emulator".to_string(),
         }
     }
 }
@@ -29,9 +32,12 @@ fn main() {
             if arg1.eq("help") {
                 println!("emulators avaiblable:");
                 println!("  chip8 - Chip8 emulator");
+                println!("  gb - GameBoy emulator");
                 return;
             } else if arg1.eq("chip8") {
                 emulator_to_use = Emulators::Chip8;
+            } else if arg1.eq("gb") {
+                emulator_to_use = Emulators::GameBoy;
             } else {
                 println!("rom_path was not provided!");
                 println!("usage: emulator rom_path");
@@ -49,6 +55,7 @@ fn main() {
     let rom_type = rom_path.split(".").last().unwrap();
     match (rom_type, emulator_to_use) {
         ("ch8", Emulators::Chip8) => {}
+        ("gb", Emulators::GameBoy) => {}
         _ => {
             println!(
                 ".{rom_type} is not a valid extension for {} to execute",
@@ -66,10 +73,8 @@ fn main() {
         }
     };
 
-    // I foresee this will not work once I implement the next emulator
-    // Seems like a future me problem
-    let mut emulator = match emulator_to_use {
-        Emulators::Chip8 => chip8::Chip8Emulator::new(),
+    match emulator_to_use {
+        Emulators::Chip8 => chip8::Chip8Emulator::new().run(&rom),
+        Emulators::GameBoy => gb::GameBoyEmulator::new().run(&rom),
     };
-    emulator.run(&rom);
 }
