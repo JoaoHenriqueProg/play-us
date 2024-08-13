@@ -259,6 +259,18 @@ impl Emulator for Chip8Emulator {
                             println!("  [INFO]: Ignored.");
                         }
                     }
+                    ('5', n1, n2, '0') => {
+                        let reg_i1 = usize::from_str_radix(n1.to_string().as_str(), 16).unwrap();
+                        let reg_i2 = usize::from_str_radix(n2.to_string().as_str(), 16).unwrap();
+                        println!(
+                            "[IIRE]: V{reg_i1} == V{reg_i2} | {} == {}",
+                            self.cpu.regs[reg_i1], self.cpu.regs[reg_i2]
+                        ); // Ignore if registers are equal
+                        if self.cpu.regs[reg_i1] == self.cpu.regs[reg_i2] {
+                            self.cpu.ip += 2;
+                            println!("  [INFO]: Ignored.");
+                        }
+                    }
                     ('6', r, n1, n2) => {
                         let reg_i = usize::from_str_radix(r.to_string().as_str(), 16).unwrap();
                         let value_to_set =
