@@ -7,8 +7,17 @@ mod chip8;
 mod emulator;
 mod video;
 
+#[derive(Clone, Copy)]
 enum Emulators {
     Chip8,
+}
+
+impl ToString for Emulators {
+    fn to_string(&self) -> String {
+        match self {
+            Emulators::Chip8 => "Chip8 emulator".to_string(),
+        }
+    }
 }
 
 fn main() {
@@ -37,6 +46,17 @@ fn main() {
         }
     }
     let rom_path = args[2].as_str();
+    let rom_type = rom_path.split(".").last().unwrap();
+    match (rom_type, emulator_to_use) {
+        ("ch8", Emulators::Chip8) => {}
+        _ => {
+            println!(
+                ".{rom_type} is not a valid extension for {} to execute",
+                emulator_to_use.to_string()
+            );
+            return;
+        }
+    }
     let rom = fs::read(rom_path);
     let rom = match rom {
         Ok(bytes) => bytes,
