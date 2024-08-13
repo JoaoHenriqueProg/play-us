@@ -1,3 +1,4 @@
+use std::f64::consts::PI;
 use std::time::Instant;
 
 use crate::video;
@@ -6,7 +7,18 @@ use rand::Rng;
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::{self, Color, PixelFormatEnum};
-use sdl2::rect::Rect;
+use sdl2::rect::{Point, Rect};
+
+fn sinewave(time: f64, freq: f64, amp: f64) -> f64 {
+    return ((time * PI * freq).sin() * amp + amp) / 2.;
+}
+
+fn squarewave(time: f64, freq: f64, amp: f64) -> f64 {
+    if sinewave(time, freq, amp) > amp / 2. {
+        return amp
+    }
+    return 0.
+}
 
 struct Cpu {
     regs: [u8; 16],
@@ -25,6 +37,7 @@ pub struct Chip8Emulator {
 
 impl Emulator for Chip8Emulator {
     fn run(&mut self, rom: &[u8]) {
+        let start_time = Instant::now();
         let mut screen = Screen::new();
         let mut screen_bits = [false; 64 * 32];
 
@@ -107,6 +120,9 @@ impl Emulator for Chip8Emulator {
                 Ok(_) => {}
                 Err(err) => panic!("{}", err),
             }
+            screen.canvas.set_draw_color(Color::RED);
+            let y = squarewave(start_time.elapsed().as_secs_f64(), 2., 10.);
+            screen.canvas.fill_rect(Rect::new(8, y as i32 * 8, 16, 16));
             screen.canvas.present();
             
             print!("{:04X}: ", self.cpu.ip + 512);
