@@ -7,13 +7,13 @@ pub struct Screen {
 }
 
 impl Screen {
-    pub fn new() -> Screen {
+    pub fn new(width: Option<u32>, height: Option<u32>) -> Screen {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
         let audio_subsystem = sdl_context.audio().unwrap();
 
         let window = video_subsystem
-            .window("SDL2", 640, 480)
+            .window("SDL2", width.unwrap_or(640), height.unwrap_or(480))
             .position_centered()
             .build()
             .map_err(|e| e.to_string()).unwrap();
@@ -33,4 +33,3 @@ impl Screen {
         }
     }
 }
-

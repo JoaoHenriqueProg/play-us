@@ -71,7 +71,8 @@ pub struct Chip8Emulator {
 
 impl Emulator for Chip8Emulator {
     fn run(&mut self, rom: &[u8]) {
-        let mut screen = Screen::new();
+        let pixel_size = 16;
+        let mut screen = Screen::new(Some(64 * pixel_size), Some(32 * pixel_size));
         let mut screen_bits = [false; 64 * 32];
 
         self.memory[512..512 + rom.len()].copy_from_slice(&rom);
@@ -170,7 +171,12 @@ impl Emulator for Chip8Emulator {
             for pixel_y in 0..32 {
                 for pixel_x in 0..64 {
                     if screen_bits[pixel_x + pixel_y * 64] {
-                        let rect = Rect::new(pixel_x as i32 * 8, pixel_y as i32 * 8, 8, 8);
+                        let rect = Rect::new(
+                            pixel_x as i32 * pixel_size as i32,
+                            pixel_y as i32 * pixel_size as i32,
+                            pixel_size,
+                            pixel_size,
+                        );
                         rects.push(rect);
                     }
                 }
