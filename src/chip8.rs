@@ -1,23 +1,57 @@
-use std::f64::consts::PI;
+use std::f32::consts::PI as PI32;
+use std::f64::consts::PI as PI64;
 use std::time::Instant;
 
 use crate::video;
 use crate::{emulator::Emulator, video::Screen};
 use rand::Rng;
+use sdl2::audio::{AudioCallback, AudioSpec, AudioSpecDesired};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::{self, Color, PixelFormatEnum};
 use sdl2::rect::{Point, Rect};
 
-fn sinewave(time: f64, freq: f64, amp: f64) -> f64 {
-    return ((time * PI * freq).sin() * amp + amp) / 2.;
+struct SineWave {
+    freq: f32,
+    amp: f32,
+    phase: f32, // kinda like time apparently? got study more :)
+    sample_rate: f32 // amount of points of wave per second
 }
 
-fn squarewave(time: f64, freq: f64, amp: f64) -> f64 {
-    if sinewave(time, freq, amp) > amp / 2. {
-        return amp
+impl AudioCallback for SineWave {
+    type Channel = f32;
+
+    fn callback(&mut self, out: &mut [Self::Channel]) {
+        for x in out.iter_mut() {
+            *x = ((self.phase * PI32 * 2.0).sin() * self.amp) as f32;
+            println!("new wave: {}", *x);
+            // here, instead of adjust the pitch by multiplying the time * pi * freq, we make the phaser, or "timer" go faster
+            self.phase = (self.phase + self.freq / self.sample_rate) % 1.0;
+        }
     }
-    return 0.
+}
+
+struct SquareWave {
+    freq: f32,
+    amp: f32,
+    phase: f32, // kinda like time apparently? got study more :)
+    sample_rate: f32 // amount of points of wave per second
+}
+
+impl AudioCallback for SquareWave {
+    type Channel = f32;
+
+    fn callback(&mut self, out: &mut [Self::Channel]) {
+        for x in out.iter_mut() {
+            *x = ((self.phase * PI32 * 2.0).sin() * self.amp) as f32;
+            if *x > 0. {
+                *x = self.amp;
+            } else {
+                *x = -self.amp;
+            }
+            self.phase = (self.phase + self.freq / self.sample_rate) % 1.0;
+        }
+    }
 }
 
 struct Cpu {
@@ -44,6 +78,24 @@ impl Emulator for Chip8Emulator {
         self.memory[512..512 + rom.len()].copy_from_slice(&rom);
         let mut cur_pressed_keys = [false; 16];
         let mut timers_timer = Instant::now();
+
+        let audio_spec = AudioSpecDesired {
+            freq: Some(44100),
+            channels: Some(1), // mono channel
+            samples: None,
+        };
+
+        let audio_device = screen.audio.open_playback(None, &audio_spec, |spec| {
+            SquareWave {
+                freq: 440., // should be an a
+                phase: 0., // kinda like start of timer
+                amp: 0.25, // I sure hope this doesn't explode my laptop's speakers
+                sample_rate: spec.freq as f32,
+            }
+        }).unwrap();
+
+        audio_device.resume();
+
         'main_loop: loop {
             if timers_timer.elapsed().as_millis() > 1000 / 60 {
                 // the timers go down one each 1/60 of a second

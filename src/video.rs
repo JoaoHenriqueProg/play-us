@@ -1,14 +1,16 @@
-use sdl2::{self, render::Canvas, video::Window, EventPump};
+use sdl2::{self, render::Canvas, video::Window, AudioSubsystem, EventPump};
 
 pub struct Screen {
     pub canvas: Canvas<Window>,
-    pub event_pump: EventPump
+    pub event_pump: EventPump,
+    pub audio: AudioSubsystem
 }
 
 impl Screen {
     pub fn new() -> Screen {
         let sdl_context = sdl2::init().unwrap();
         let video_subsystem = sdl_context.video().unwrap();
+        let audio_subsystem = sdl_context.audio().unwrap();
 
         let window = video_subsystem
             .window("SDL2", 640, 480)
@@ -26,7 +28,8 @@ impl Screen {
 
         Screen {
             canvas,
-            event_pump
+            event_pump,
+            audio: audio_subsystem
         }
     }
 }
