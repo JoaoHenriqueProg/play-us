@@ -5,7 +5,7 @@ use std::time::Instant;
 use crate::video;
 use crate::{emulator::Emulator, video::Screen};
 use rand::Rng;
-use sdl2::audio::{AudioCallback, AudioSpec, AudioSpecDesired};
+use sdl2::audio::{AudioCallback, AudioSpec, AudioSpecDesired, AudioStatus};
 use sdl2::event::Event;
 use sdl2::keyboard::Keycode;
 use sdl2::pixels::{self, Color, PixelFormatEnum};
@@ -14,8 +14,8 @@ use sdl2::rect::{Point, Rect};
 struct SineWave {
     freq: f32,
     amp: f32,
-    phase: f32, // kinda like time apparently? got study more :)
-    sample_rate: f32 // amount of points of wave per second
+    phase: f32,       // kinda like time apparently? got study more :)
+    sample_rate: f32, // amount of points of wave per second
 }
 
 impl AudioCallback for SineWave {
@@ -34,8 +34,8 @@ impl AudioCallback for SineWave {
 struct SquareWave {
     freq: f32,
     amp: f32,
-    phase: f32, // kinda like time apparently? got study more :)
-    sample_rate: f32 // amount of points of wave per second
+    phase: f32,       // kinda like time apparently? got study more :)
+    sample_rate: f32, // amount of points of wave per second
 }
 
 impl AudioCallback for SquareWave {
@@ -85,16 +85,19 @@ impl Emulator for Chip8Emulator {
             samples: None,
         };
 
-        let audio_device = screen.audio.open_playback(None, &audio_spec, |spec| {
-            SquareWave {
-                freq: 440., // should be an a
-                phase: 0., // kinda like start of timer
-                amp: 0.25, // I sure hope this doesn't explode my laptop's speakers
-                sample_rate: spec.freq as f32,
-            }
-        }).unwrap();
+        let audio_device = screen
+            .audio
+            .open_playback(None, &audio_spec, |spec| {
+                SquareWave {
+                    freq: 440., // should be an a
+                    phase: 0.,  // kinda like start of timer
+                    amp: 0.25,  // I sure hope this doesn't explode my laptop's speakers
+                    sample_rate: spec.freq as f32,
+                }
+            })
+            .unwrap();
 
-        audio_device.resume();
+        audio_device.pause();
 
         'main_loop: loop {
             if timers_timer.elapsed().as_millis() > 1000 / 60 {
@@ -102,6 +105,16 @@ impl Emulator for Chip8Emulator {
                 self.dt = self.dt.saturating_sub(1);
                 self.st = self.st.saturating_sub(1);
                 timers_timer = Instant::now();
+
+                if audio_device.status() == AudioStatus::Paused && self.st > 0 {
+                    // sound timer was set to something
+                    audio_device.resume();
+                }
+
+                if audio_device.status() == AudioStatus::Playing && self.st == 0 {
+                    // sound timer arrived at 0
+                    audio_device.pause();
+                }
             }
 
             for event in screen.event_pump.poll_iter() {
@@ -172,14 +185,11 @@ impl Emulator for Chip8Emulator {
                 Ok(_) => {}
                 Err(err) => panic!("{}", err),
             }
-            screen.canvas.set_draw_color(Color::RED);
-            let y = squarewave(start_time.elapsed().as_secs_f64(), 2., 10.);
-            screen.canvas.fill_rect(Rect::new(8, y as i32 * 8, 16, 16));
             screen.canvas.present();
-            
+
             print!("{:04X}: ", self.cpu.ip + 512);
             let frame_start = Instant::now();
-            
+
             for _ in 0..750 / 60 {
                 let hex1 = format!("{:02X}", rom[self.cpu.ip]).chars().nth(0).unwrap();
                 let hex2 = format!("{:02X}", rom[self.cpu.ip]).chars().nth(1).unwrap();
@@ -443,7 +453,8 @@ impl Emulator for Chip8Emulator {
                         println!("[SDTR]: DT = V{reg_i} = {}", self.dt);
                     }
                     ('F', n, '1', '8') => {
-                        self.st = usize::from_str_radix(n.to_string().as_str(), 16).unwrap();
+                        self.st = self.cpu.regs
+                            [usize::from_str_radix(n.to_string().as_str(), 16).unwrap() as usize] as usize;
                         println!("[STST]: Sound timer = {}", self.st);
                     }
                     ('F', r, '1', 'E') => {
