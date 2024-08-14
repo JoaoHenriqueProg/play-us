@@ -197,6 +197,46 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x59 => {
+                println!("LD E,C");
+                self.cpu.regs[Regs::E as usize] = self.cpu.regs[Regs::C as usize];
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x5A => {
+                println!("LD E,D");
+                self.cpu.regs[Regs::E as usize] = self.cpu.regs[Regs::D as usize];
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x6C => {
+                println!("LD L,H");
+                self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::H as usize];
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x6E => {
+                println!("LD L,(HL)");
+                let mut address = 0;
+
+                address |= (self.cpu.regs[Regs::H as usize] as usize) << 8;
+                address |= self.cpu.regs[Regs::L as usize] as usize;
+
+                self.cpu.regs[Regs::L as usize] = self.cpu.memory[address];
+                self.cpu.pc += 1;
+                return 8;
+            }
+            0x75 => {
+                println!("LD (HL),L");
+                let mut address = 0;
+
+                address |= (self.cpu.regs[Regs::H as usize] as usize) << 8;
+                address |= self.cpu.regs[Regs::L as usize] as usize;
+
+                self.cpu.memory[address] = self.cpu.regs[Regs::L as usize];
+                self.cpu.pc += 1;
+                return 8;
+            }
             0xC3 => {
                 println!("JMP a16");
                 let mut new_address = 0;
