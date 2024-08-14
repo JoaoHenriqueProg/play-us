@@ -114,6 +114,16 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x11 => {
+                println!("LD DE,d16");
+                self.cpu.pc += 1;
+                self.cpu.regs[Regs::D as usize] = rom[self.cpu.pc];
+                self.cpu.pc += 1;
+                self.cpu.regs[Regs::E as usize] = rom[self.cpu.pc];
+
+                self.cpu.pc += 1;
+                return 12;
+            }
             0x2C => {
                 println!("INC L");
                 // check for half carry first of all
@@ -142,9 +152,28 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x4A => {
+                println!("LD C,D");
+                self.cpu.regs[Regs::C as usize] = self.cpu.regs[Regs::D as usize];
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x4B => {
+                println!("LD C,E");
+                self.cpu.regs[Regs::C as usize] = self.cpu.regs[Regs::E as usize];
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x53 => {
                 println!("LD D,E");
                 self.cpu.regs[Regs::D as usize] = self.cpu.regs[Regs::E as usize];
+                self.cpu.pc += 1;
+                return 4
+            }
+            0x55 => {
+                println!("LD D,L");
+                self.cpu.regs[Regs::D as usize] = self.cpu.regs[Regs::L as usize];
+                self.cpu.pc += 1;
                 return 4
             }
             0xC3 => {
