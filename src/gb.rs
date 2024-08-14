@@ -176,6 +176,27 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4
             }
+            0x56 => {
+                println!("LD D,(HL)");
+                let mut hl = 0;
+                hl |= (self.cpu.regs[Regs::H as usize] as usize) << 8;
+                hl |= self.cpu.regs[Regs::L as usize] as usize;
+                self.cpu.regs[Regs::D as usize] = self.cpu.memory[hl];
+                self.cpu.pc += 1;
+                return 8
+            }
+            0x57 => {
+                println!("LD D,A");
+                self.cpu.regs[Regs::D as usize] = self.cpu.regs[Regs::A as usize];
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x58 => {
+                println!("LD E,B");
+                self.cpu.regs[Regs::E as usize] = self.cpu.regs[Regs::B as usize];
+                self.cpu.pc += 1;
+                return 4;
+            }
             0xC3 => {
                 println!("JMP a16");
                 let mut new_address = 0;
