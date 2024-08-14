@@ -78,6 +78,18 @@ impl GameBoyEmulator {
     }
 
     #[inline]
+    fn set_c_flag(&mut self, state: bool) {
+        match state {
+            true => {
+                self.cpu.regs[Regs::F as usize] = self.cpu.regs[Regs::F as usize] | 1 << 4;
+            }
+            false => {
+                self.cpu.regs[Regs::F as usize] = self.cpu.regs[Regs::F as usize] & !(1 << 4);
+            }
+        }
+    }
+
+    #[inline]
     fn reg_inc_a(&mut self, to_inc: u8) {
         self.cpu.regs[Regs::A as usize] = self.cpu.regs[Regs::A as usize].wrapping_add(to_inc);
     }
@@ -101,13 +113,16 @@ impl GameBoyEmulator {
         // returns the cpu cycles it takes, so in the future I can implement real cpu bottleneck
         print!("{:04X}: ", self.cpu.pc);
         match rom[self.cpu.pc] {
-            0 => {
+            // 5B (LD E,E)
+            0 | 0x5B=> {
                 println!("NOP");
                 self.cpu.pc += 1;
                 return 4;
             }
             0x05 => {
                 // check for half carry
+                println!("DEC B");
+                // todo: this is very wrong, if dec b appears in the output, it's time to fix it
                 let half_b = self.cpu.regs[Regs::B as usize] & 0x0F;
                 let half_one = 1 & 0x0F;
                 self.set_h_flag(half_one > half_b);
@@ -223,6 +238,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
+            0x6F => {
+                println!("LD L,A");
+                self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::A as usize];
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x75 => {
                 println!("LD (HL),L");
                 self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::L as usize];
@@ -238,6 +259,66 @@ impl GameBoyEmulator {
                 new_address |= rom[self.cpu.pc] as usize;
                 self.cpu.pc = new_address;
                 return 16;
+            }
+            0x90 => {
+                println!("SUB B");
+                let half_a: u8 = self.cpu.regs[Regs::A as usize] & 0x0F;
+                let half_b = self.cpu.regs[Regs::B as usize] & 0x0F;
+                self.set_h_flag(half_a < half_b);
+
+                self.set_c_flag(self.cpu.regs[Regs::B as usize] > self.cpu.regs[Regs::A as usize]);
+
+                self.cpu.regs[Regs::A as usize] = self.cpu.regs[Regs::A as usize].wrapping_sub(self.cpu.regs[Regs::B as usize]);
+
+                self.set_z_flag(self.cpu.regs[Regs::A as usize] == 0);
+                self.set_n_flag(true);
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x91 => {
+                println!("SUB C");
+                let half_a: u8 = self.cpu.regs[Regs::A as usize] & 0x0F;
+                let half_c = self.cpu.regs[Regs::C as usize] & 0x0F;
+                self.set_h_flag(half_a < half_c);
+
+                self.set_c_flag(self.cpu.regs[Regs::C as usize] > self.cpu.regs[Regs::A as usize]);
+
+                self.cpu.regs[Regs::A as usize] = self.cpu.regs[Regs::A as usize].wrapping_sub(self.cpu.regs[Regs::C as usize]);
+
+                self.set_z_flag(self.cpu.regs[Regs::A as usize] == 0);
+                self.set_n_flag(true);
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x92 => {
+                println!("SUB D");
+                let half_a: u8 = self.cpu.regs[Regs::A as usize] & 0x0F;
+                let half_d = self.cpu.regs[Regs::D as usize] & 0x0F;
+                self.set_h_flag(half_a < half_d);
+
+                self.set_c_flag(self.cpu.regs[Regs::D as usize] > self.cpu.regs[Regs::A as usize]);
+
+                self.cpu.regs[Regs::A as usize] = self.cpu.regs[Regs::A as usize].wrapping_sub(self.cpu.regs[Regs::D as usize]);
+
+                self.set_z_flag(self.cpu.regs[Regs::A as usize] == 0);
+                self.set_n_flag(true);
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x93 => {
+                println!("SUB E");
+                let half_a: u8 = self.cpu.regs[Regs::A as usize] & 0x0F;
+                let half_e = self.cpu.regs[Regs::E as usize] & 0x0F;
+                self.set_h_flag(half_a < half_e);
+
+                self.set_c_flag(self.cpu.regs[Regs::E as usize] > self.cpu.regs[Regs::A as usize]);
+
+                self.cpu.regs[Regs::A as usize] = self.cpu.regs[Regs::A as usize].wrapping_sub(self.cpu.regs[Regs::E as usize]);
+
+                self.set_z_flag(self.cpu.regs[Regs::A as usize] == 0);
+                self.set_n_flag(true);
+                self.cpu.pc += 1;
+                return 4;
             }
             _ => todo!(
                 "{:02X}\nPC: {:04X} | {}",
