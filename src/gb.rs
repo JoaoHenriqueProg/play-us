@@ -83,7 +83,11 @@ impl GameBoyEmulator {
     }
     #[inline]
     fn reg_dec_b(&mut self, to_dec: u8) {
-        self.cpu.regs[Regs::B as usize] = self.cpu.regs[Regs::A as usize].wrapping_sub(to_dec);
+        self.cpu.regs[Regs::B as usize] = self.cpu.regs[Regs::B as usize].wrapping_sub(to_dec);
+    }
+    #[inline]
+    fn reg_inc_l(&mut self, to_inc: u8) {
+        self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::L as usize].wrapping_add(to_inc);
     }
 
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
@@ -110,6 +114,20 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x2C => {
+                println!("INC L");
+                // check for half carry first of all
+                let half_reg = self.cpu.regs[Regs::L as usize] & 0x0F;
+                let half_inc = 1;
+
+                self.reg_inc_l(1);
+
+                self.set_n_flag(false);
+                self.set_z_flag(self.cpu.regs[Regs::L as usize] == 0);
+                self.set_h_flag(half_inc + half_reg > 0xF);
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x3C => {
                 println!("INC A");
                 // check for half carry first of all
@@ -123,6 +141,21 @@ impl GameBoyEmulator {
                 self.set_h_flag(half_inc + half_reg > 0xF);
                 self.cpu.pc += 1;
                 return 4;
+            }
+            0x53 => {
+                println!("LD D,E");
+                self.cpu.regs[Regs::D as usize] = self.cpu.regs[Regs::E as usize];
+                return 4
+            }
+            0xC3 => {
+                println!("JMP a16");
+                let mut new_address = 0;
+                self.cpu.pc += 1;
+                new_address |= (rom[self.cpu.pc] as usize) << 8;
+                self.cpu.pc += 1;
+                new_address |= rom[self.cpu.pc] as usize;
+                self.cpu.pc = new_address;
+                return 16;
             }
             _ => todo!(
                 "{:02X}\nPC: {:04X} | {}",
