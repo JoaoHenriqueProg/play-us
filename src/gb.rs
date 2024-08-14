@@ -97,6 +97,19 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x05 => {
+                // check for half carry
+                let half_b = self.cpu.regs[Regs::B as usize] & 0x0F;
+                let half_one = 1 & 0x0F;
+                self.set_h_flag(half_one > half_b);
+
+                self.reg_dec_b(1);
+
+                self.set_z_flag(self.cpu.regs[Regs::B as usize] == 0);
+                self.set_n_flag(true);
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x3C => {
                 println!("INC A");
                 // check for half carry first of all
@@ -108,19 +121,6 @@ impl GameBoyEmulator {
                 self.set_n_flag(false);
                 self.set_z_flag(self.cpu.regs[Regs::A as usize] == 0);
                 self.set_h_flag(half_inc + half_reg > 0xF);
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x05 => {
-                // check for half carry
-                let half_b = self.cpu.regs[Regs::B as usize] & 0x0F;
-                let half_one = 1 & 0x0F;
-                self.set_h_flag(half_one > half_b);
-
-                self.reg_dec_b(1);
-
-                self.set_z_flag(self.cpu.regs[Regs::B as usize] == 0);
-                self.set_n_flag(true);
                 self.cpu.pc += 1;
                 return 4;
             }
