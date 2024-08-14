@@ -226,6 +226,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x5C => {
+                println!("LD E,H");
+                self.cpu.regs[Regs::E as usize] = self.cpu.regs[Regs::H as usize];
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x6C => {
                 println!("LD L,H");
                 self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::H as usize];
@@ -243,6 +249,30 @@ impl GameBoyEmulator {
                 self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::A as usize];
                 self.cpu.pc += 1;
                 return 4;
+            }
+            0x71 => {
+                println!("LD (HL),C");
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::C as usize];
+                self.cpu.pc += 1;
+                return 8;
+            }
+            0x72 => {
+                println!("LD (HL),D");
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::D as usize];
+                self.cpu.pc += 1;
+                return 8;
+            }
+            0x73 => {
+                println!("LD (HL),E");
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::E as usize];
+                self.cpu.pc += 1;
+                return 8;
+            }
+            0x74 => {
+                println!("LD (HL),H");
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::H as usize];
+                self.cpu.pc += 1;
+                return 8;
             }
             0x75 => {
                 println!("LD (HL),L");
@@ -319,6 +349,37 @@ impl GameBoyEmulator {
                 self.set_n_flag(true);
                 self.cpu.pc += 1;
                 return 4;
+            }
+            0x94 => {
+                println!("SUB H");
+                let half_a: u8 = self.cpu.regs[Regs::A as usize] & 0x0F;
+                let half_h = self.cpu.regs[Regs::H as usize] & 0x0F;
+                self.set_h_flag(half_a < half_h);
+
+                self.set_c_flag(self.cpu.regs[Regs::H as usize] > self.cpu.regs[Regs::A as usize]);
+
+                self.cpu.regs[Regs::A as usize] = self.cpu.regs[Regs::A as usize].wrapping_sub(self.cpu.regs[Regs::H as usize]);
+
+                self.set_z_flag(self.cpu.regs[Regs::A as usize] == 0);
+                self.set_n_flag(true);
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x95 => {
+                println!("SUB L");
+                let half_a: u8 = self.cpu.regs[Regs::A as usize] & 0x0F;
+                let half_h = self.cpu.regs[Regs::L as usize] & 0x0F;
+                self.set_h_flag(half_a < half_h);
+
+                self.set_c_flag(self.cpu.regs[Regs::L as usize] > self.cpu.regs[Regs::A as usize]);
+
+                self.cpu.regs[Regs::A as usize] = self.cpu.regs[Regs::A as usize].wrapping_sub(self.cpu.regs[Regs::L as usize]);
+
+                self.set_z_flag(self.cpu.regs[Regs::A as usize] == 0);
+                self.set_n_flag(true);
+                self.cpu.pc += 1;
+                return 4;
+                // TODO: None of these repeated 0x9X opcodes modify the second, I should put this into a single function
             }
             _ => todo!(
                 "{:02X}\nPC: {:04X} | {}",
