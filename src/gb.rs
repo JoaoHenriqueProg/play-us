@@ -198,6 +198,13 @@ impl GameBoyEmulator {
 
 impl Emulator for GameBoyEmulator {
     fn run(&mut self, rom: &[u8]) {
+        // for now it doesn't matter, the tetris rom doesn't have bank switching (as far as I now)
+        if rom.len() > 1024 * 32 {
+            todo!("rom too big, implement bank switching")
+        }
+
+        self.cpu.memory[0..rom.len()].copy_from_slice(rom);
+
         loop {
             self.compute(rom);
         }
