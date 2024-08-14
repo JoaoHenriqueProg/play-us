@@ -90,6 +90,11 @@ impl GameBoyEmulator {
         self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::L as usize].wrapping_add(to_inc);
     }
 
+    #[inline]
+    fn get_hl(&self) -> u16 {
+        ((self.cpu.regs[Regs::H as usize] as u16) << 8) | self.cpu.regs[Regs::L as usize] as u16
+    }
+
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
     // the game boy architecture and stuff
     fn compute(&mut self, rom: &[u8]) -> u64 {
@@ -178,10 +183,7 @@ impl GameBoyEmulator {
             }
             0x56 => {
                 println!("LD D,(HL)");
-                let mut hl = 0;
-                hl |= (self.cpu.regs[Regs::H as usize] as usize) << 8;
-                hl |= self.cpu.regs[Regs::L as usize] as usize;
-                self.cpu.regs[Regs::D as usize] = self.cpu.memory[hl];
+                self.cpu.regs[Regs::D as usize] = self.cpu.memory[self.get_hl() as usize];
                 self.cpu.pc += 1;
                 return 8
             }
@@ -217,23 +219,13 @@ impl GameBoyEmulator {
             }
             0x6E => {
                 println!("LD L,(HL)");
-                let mut address = 0;
-
-                address |= (self.cpu.regs[Regs::H as usize] as usize) << 8;
-                address |= self.cpu.regs[Regs::L as usize] as usize;
-
-                self.cpu.regs[Regs::L as usize] = self.cpu.memory[address];
+                self.cpu.regs[Regs::L as usize] = self.cpu.memory[self.get_hl() as usize];
                 self.cpu.pc += 1;
                 return 8;
             }
             0x75 => {
                 println!("LD (HL),L");
-                let mut address = 0;
-
-                address |= (self.cpu.regs[Regs::H as usize] as usize) << 8;
-                address |= self.cpu.regs[Regs::L as usize] as usize;
-
-                self.cpu.memory[address] = self.cpu.regs[Regs::L as usize];
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::L as usize];
                 self.cpu.pc += 1;
                 return 8;
             }
