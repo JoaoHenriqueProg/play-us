@@ -269,7 +269,7 @@ impl GameBoyEmulator {
                 value_d16 |= rom[self.cpu.pc + 1] as usize;
                 value_d16 |= (rom[self.cpu.pc + 2] as usize) << 8;
                 self.cpu.sp = value_d16 as u16;
-                self.cpu.pc += 1;
+                self.cpu.pc += 3;
                 return 12;
             }
             0x32 => {
