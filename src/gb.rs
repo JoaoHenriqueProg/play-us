@@ -65,6 +65,10 @@ impl GameBoyEmulator {
             }
         }
     }
+    #[inline]
+    fn get_z_flag(&mut self) -> bool {
+        self.cpu.regs[Regs::F as usize] & (1 << 7) != 0
+    }
 
     #[inline]
     fn set_h_flag(&mut self, state: bool) {
@@ -150,6 +154,20 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x06 => {
+                println!("LD B,d8");
+                self.cpu.pc += 1;
+                self.cpu.regs[Regs::B as usize] = self.cpu.memory[self.cpu.pc];
+                self.cpu.pc += 1;
+                return 8;
+            }
+            0x0E => {
+                println!("LD C,d8");
+                self.cpu.pc += 1;
+                self.cpu.regs[Regs::C as usize] = self.cpu.memory[self.cpu.pc];
+                self.cpu.pc += 1;
+                return 8;
+            }
             0x11 => {
                 println!("LD DE,d16");
                 self.cpu.pc += 1;
@@ -157,6 +175,34 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 self.cpu.regs[Regs::E as usize] = rom[self.cpu.pc];
 
+                self.cpu.pc += 1;
+                return 12;
+            }
+            0x20 => {
+                println!("JR NR,r8");
+                // com branch: 12
+                // sem branch: 8
+                if !self.get_z_flag() {
+                    self.cpu.pc += 1;
+                    // pura gambiarra
+                    // todo: maybe fix this later
+                    self.cpu.pc = (self.cpu.pc as i128
+                        + (self.cpu.memory[self.cpu.pc] as i8) as i128)
+                        as usize
+                        + 1;
+                    return 12;
+                }
+                self.cpu.pc += 2;
+                return 8;
+            }
+            0x21 => {
+                println!("LD HL,d16");
+                // regs -> h l -- mem -> x y
+                //         y x
+                self.cpu.pc += 1;
+                self.cpu.regs[Regs::L as usize] = self.cpu.memory[self.cpu.pc];
+                self.cpu.pc += 1;
+                self.cpu.regs[Regs::H as usize] = self.cpu.memory[self.cpu.pc];
                 self.cpu.pc += 1;
                 return 12;
             }
@@ -173,6 +219,18 @@ impl GameBoyEmulator {
                 self.set_h_flag(half_inc + half_reg > 0xF);
                 self.cpu.pc += 1;
                 return 4;
+            }
+            0x32 => {
+                println!("LD (HL-),A");
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::A as usize];
+                self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::L as usize].wrapping_sub(1);
+                if self.cpu.regs[Regs::L as usize] == 255 {
+                    // number wraped around
+                    self.cpu.regs[Regs::H as usize] =
+                        self.cpu.regs[Regs::H as usize].wrapping_sub(1);
+                }
+                self.cpu.pc += 1;
+                return 8;
             }
             0x3C => {
                 println!("INC A");
@@ -295,6 +353,12 @@ impl GameBoyEmulator {
                 self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::L as usize];
                 self.cpu.pc += 1;
                 return 8;
+            }
+            0xAF => {
+                println!("XOR A");
+                self.cpu.regs[Regs::A as usize] = 0;
+                self.cpu.pc += 1;
+                return 4;
             }
             0xC3 => {
                 println!("JMP a16");
