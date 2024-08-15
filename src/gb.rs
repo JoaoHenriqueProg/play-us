@@ -298,11 +298,13 @@ impl GameBoyEmulator {
             }
             0xC3 => {
                 println!("JMP a16");
+                // and this is where I learnt the difference between big and small endian
+                // now I just wonder where else have I not flipped the bytes where I should
                 let mut new_address = 0;
                 self.cpu.pc += 1;
-                new_address |= (rom[self.cpu.pc] as usize) << 8;
-                self.cpu.pc += 1;
                 new_address |= rom[self.cpu.pc] as usize;
+                self.cpu.pc += 1;
+                new_address |= (rom[self.cpu.pc] as usize) << 8;
                 self.cpu.pc = new_address;
                 return 16;
             }
