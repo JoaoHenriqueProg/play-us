@@ -499,8 +499,7 @@ impl GameBoyEmulator {
                 println!("CP d8");
                 let value = self.cpu.memory[self.cpu.pc + 1];
                 let half_a: u8 = self.cpu.regs[RegA] & 0x0F;
-                // todo: fix this
-                let half_v = self.cpu.regs[value as usize] & 0x0F;
+                let half_v = value & 0x0F;
                 self.set_h_flag(half_a < half_v);
 
                 self.set_c_flag(value > self.cpu.regs[RegA]);
@@ -508,7 +507,7 @@ impl GameBoyEmulator {
                 let result = self.cpu.regs[RegA].wrapping_sub(value);
                 self.set_z_flag(result == 0);
                 self.set_n_flag(true);
-                self.cpu.pc += 1;
+                self.cpu.pc += 2;
                 return 8;
             }
             _ => {
