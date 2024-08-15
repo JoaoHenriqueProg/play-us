@@ -160,9 +160,8 @@ impl GameBoyEmulator {
             }
             0x06 => {
                 println!("LD B,d8");
-                self.cpu.pc += 1;
-                self.cpu.regs[Regs::B as usize] = self.cpu.memory[self.cpu.pc];
-                self.cpu.pc += 1;
+                self.cpu.regs[Regs::B as usize] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.pc += 2;
                 return 8;
             }
             0x0D => {
@@ -180,47 +179,40 @@ impl GameBoyEmulator {
             }
             0x0E => {
                 println!("LD C,d8");
-                self.cpu.pc += 1;
-                self.cpu.regs[Regs::C as usize] = self.cpu.memory[self.cpu.pc];
-                self.cpu.pc += 1;
+                self.cpu.regs[Regs::C as usize] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.pc += 2;
                 return 8;
             }
             0x11 => {
                 println!("LD DE,d16");
-                self.cpu.pc += 1;
-                self.cpu.regs[Regs::D as usize] = rom[self.cpu.pc];
-                self.cpu.pc += 1;
-                self.cpu.regs[Regs::E as usize] = rom[self.cpu.pc];
-
-                self.cpu.pc += 1;
+                self.cpu.regs[Regs::D as usize] = rom[self.cpu.pc + 1];
+                self.cpu.regs[Regs::E as usize] = rom[self.cpu.pc + 2];
+                self.cpu.pc += 3;
                 return 12;
             }
             0x20 => {
                 println!("JR NR,r8");
                 // com branch: 12
                 // sem branch: 8
-                if !self.get_z_flag() {
-                    self.cpu.pc += 1;
-                    // pura gambiarra
-                    // todo: maybe fix this later
-                    self.cpu.pc = (self.cpu.pc as i128
-                        + (self.cpu.memory[self.cpu.pc] as i8) as i128)
-                        as usize
-                        + 1;
-                    return 12;
+                if self.get_z_flag() {
+                    self.cpu.pc += 2;
+                    return 8;
                 }
-                self.cpu.pc += 2;
-                return 8;
+                self.cpu.pc += 1;
+                // pura gambiarra
+                // todo: maybe fix this later
+                self.cpu.pc = (self.cpu.pc as i128 + (self.cpu.memory[self.cpu.pc] as i8) as i128)
+                    as usize
+                    + 1;
+                return 12;
             }
             0x21 => {
                 println!("LD HL,d16");
                 // regs -> h l -- mem -> x y
                 //         y x
-                self.cpu.pc += 1;
-                self.cpu.regs[Regs::L as usize] = self.cpu.memory[self.cpu.pc];
-                self.cpu.pc += 1;
-                self.cpu.regs[Regs::H as usize] = self.cpu.memory[self.cpu.pc];
-                self.cpu.pc += 1;
+                self.cpu.regs[Regs::L as usize] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.regs[Regs::H as usize] = self.cpu.memory[self.cpu.pc + 2];
+                self.cpu.pc += 3;
                 return 12;
             }
             0x2C => {
@@ -251,9 +243,8 @@ impl GameBoyEmulator {
             }
             0x36 => {
                 println!("LD (HL),d8");
-                self.cpu.pc += 1;
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.memory[self.cpu.pc];
-                self.cpu.pc += 1;
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.pc += 2;
                 return 12;
             }
             0x3C => {
@@ -272,9 +263,8 @@ impl GameBoyEmulator {
             }
             0x3E => {
                 println!("LD A,d8");
-                self.cpu.pc += 1;
-                self.cpu.regs[Regs::A as usize] = self.cpu.memory[self.cpu.pc];
-                self.cpu.pc += 1;
+                self.cpu.regs[Regs::A as usize] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.pc += 2;
                 return 8;
             }
             0x4A => {
@@ -432,27 +422,23 @@ impl GameBoyEmulator {
                 // and this is where I learnt the difference between big and small endian
                 // now I just wonder where else have I not flipped the bytes where I should
                 let mut new_address = 0;
-                self.cpu.pc += 1;
-                new_address |= rom[self.cpu.pc] as usize;
-                self.cpu.pc += 1;
-                new_address |= (rom[self.cpu.pc] as usize) << 8;
+                new_address |= rom[self.cpu.pc + 1] as usize;
+                new_address |= (rom[self.cpu.pc + 2] as usize) << 8;
                 self.cpu.pc = new_address;
                 return 16;
             }
             0xE0 => {
                 println!("LDH (a8),A");
-                self.cpu.pc += 1;
-                self.cpu.memory[self.cpu.memory[self.cpu.pc] as usize + 0xFF00] =
+                self.cpu.memory[self.cpu.memory[self.cpu.pc + 1] as usize + 0xFF00] =
                     self.cpu.regs[Regs::A as usize];
-                self.cpu.pc += 1;
+                self.cpu.pc += 2;
                 return 12;
             }
             0xF0 => {
                 println!("LDH A,(a8)");
-                self.cpu.pc += 1;
                 self.cpu.regs[Regs::A as usize] =
-                    self.cpu.memory[self.cpu.memory[self.cpu.pc] as usize + 0xFF00];
-                self.cpu.pc += 1;
+                    self.cpu.memory[self.cpu.memory[self.cpu.pc + 1] as usize + 0xFF00];
+                self.cpu.pc += 2;
                 return 12;
             }
             0xF3 => {
@@ -463,8 +449,7 @@ impl GameBoyEmulator {
             }
             0xFE => {
                 println!("CP d8");
-                self.cpu.pc += 1;
-                let value = self.cpu.memory[self.cpu.pc];
+                let value = self.cpu.memory[self.cpu.pc + 1];
                 let half_a: u8 = self.cpu.regs[Regs::A as usize] & 0x0F;
                 let half_v = self.cpu.regs[value as usize] & 0x0F;
                 self.set_h_flag(half_a < half_v);
@@ -474,6 +459,7 @@ impl GameBoyEmulator {
                 let result = self.cpu.regs[Regs::A as usize].wrapping_sub(value);
                 self.set_z_flag(result == 0);
                 self.set_n_flag(true);
+                self.cpu.pc += 1;
                 return 8;
             }
             _ => todo!(
