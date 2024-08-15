@@ -7,6 +7,7 @@ struct Cpu {
     regs: [u8; 8],
     // AF, BC, DE, HL, by the gods what does it mean why this order
     pc: usize,
+    ime: bool,
 }
 
 impl Cpu {
@@ -17,6 +18,7 @@ impl Cpu {
             memory: [0; 1024 * 64],
             regs: [0; 8],
             pc: 0x100,
+            ime: false
         }
     }
 }
@@ -102,6 +104,9 @@ impl GameBoyEmulator {
     fn reg_dec_b(&mut self, to_dec: u8) {
         self.cpu.regs[Regs::B as usize] = self.cpu.regs[Regs::B as usize].wrapping_sub(to_dec);
     }
+    fn reg_dec_c(&mut self, to_dec: u8) {
+        self.cpu.regs[Regs::B as usize] = self.cpu.regs[Regs::C as usize].wrapping_sub(to_dec);
+    }
     #[inline]
     fn reg_inc_l(&mut self, to_inc: u8) {
         self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::L as usize].wrapping_add(to_inc);
@@ -142,10 +147,9 @@ impl GameBoyEmulator {
             0x05 => {
                 // check for half carry
                 println!("DEC B");
-                // todo: this is very wrong, if dec b appears in the output, it's time to fix it
                 let half_b = self.cpu.regs[Regs::B as usize] & 0x0F;
                 let half_one = 1 & 0x0F;
-                self.set_h_flag(half_one > half_b);
+                self.set_h_flag(half_b < half_one);
 
                 self.reg_dec_b(1);
 
@@ -160,6 +164,19 @@ impl GameBoyEmulator {
                 self.cpu.regs[Regs::B as usize] = self.cpu.memory[self.cpu.pc];
                 self.cpu.pc += 1;
                 return 8;
+            }
+            0x0D => {
+                println!("DEC C");
+                let half_c = self.cpu.regs[Regs::C as usize] & 0x0F;
+                let half_one = 1 & 0x0F;
+                self.set_h_flag(half_c < half_one);
+
+                self.reg_dec_c(1);
+
+                self.set_z_flag(self.cpu.regs[Regs::C as usize] == 0);
+                self.set_n_flag(true);
+                self.cpu.pc += 1;
+                return 4;
             }
             0x0E => {
                 println!("LD C,d8");
@@ -245,6 +262,13 @@ impl GameBoyEmulator {
                 self.set_h_flag(half_inc + half_reg > 0xF);
                 self.cpu.pc += 1;
                 return 4;
+            }
+            0x3E => {
+                println!("LD A,d8");
+                self.cpu.pc += 1;
+                self.cpu.regs[Regs::A as usize] =  self.cpu.memory[self.cpu.pc];
+                self.cpu.pc += 1;
+                return 8;
             }
             0x4A => {
                 println!("LD C,D");
@@ -371,6 +395,11 @@ impl GameBoyEmulator {
                 new_address |= (rom[self.cpu.pc] as usize) << 8;
                 self.cpu.pc = new_address;
                 return 16;
+            }
+            0xF3 => {
+                self.cpu.ime = false;
+                self.cpu.pc += 1;
+                return 4;
             }
             0x90 => {
                 println!("SUB B");
