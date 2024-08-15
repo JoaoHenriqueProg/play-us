@@ -249,6 +249,13 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
+            0x36 => {
+                println!("LD (HL),d8");
+                self.cpu.pc += 1;
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.memory[self.cpu.pc];
+                self.cpu.pc += 1;
+                return 12;
+            }
             0x3C => {
                 println!("INC A");
                 // check for half carry first of all
@@ -432,11 +439,42 @@ impl GameBoyEmulator {
                 self.cpu.pc = new_address;
                 return 16;
             }
+            0xE0 => {
+                println!("LDH (a8),A");
+                self.cpu.pc += 1;
+                self.cpu.memory[self.cpu.memory[self.cpu.pc] as usize + 0xFF00] =
+                    self.cpu.regs[Regs::A as usize];
+                self.cpu.pc += 1;
+                return 12;
+            }
+            0xF0 => {
+                println!("LDH A,(a8)");
+                self.cpu.pc += 1;
+                self.cpu.regs[Regs::A as usize] =
+                    self.cpu.memory[self.cpu.memory[self.cpu.pc] as usize + 0xFF00];
+                self.cpu.pc += 1;
+                return 12;
+            }
             0xF3 => {
                 println!("DI");
                 self.cpu.ime = false;
                 self.cpu.pc += 1;
                 return 4;
+            }
+            0xFE => {
+                println!("CP d8");
+                self.cpu.pc += 1;
+                let value = self.cpu.memory[self.cpu.pc];
+                let half_a: u8 = self.cpu.regs[Regs::A as usize] & 0x0F;
+                let half_v = self.cpu.regs[value as usize] & 0x0F;
+                self.set_h_flag(half_a < half_v);
+
+                self.set_c_flag(value > self.cpu.regs[Regs::A as usize]);
+
+                let result = self.cpu.regs[Regs::A as usize].wrapping_sub(value);
+                self.set_z_flag(result == 0);
+                self.set_n_flag(true);
+                return 8;
             }
             _ => todo!(
                 "{:02X}\nPC: {:04X} | {}",
