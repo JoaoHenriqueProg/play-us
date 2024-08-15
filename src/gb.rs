@@ -8,6 +8,7 @@ struct Cpu {
     // AF, BC, DE, HL, by the gods what does it mean why this order
     pc: usize,
     ime: bool,
+    sp: u16, // stack pointer
 }
 
 impl Cpu {
@@ -19,6 +20,7 @@ impl Cpu {
             regs: [0; 8],
             pc: 0x100,
             ime: false,
+            sp: 0xFFFE
         }
     }
 }
@@ -425,6 +427,15 @@ impl GameBoyEmulator {
                 new_address |= rom[self.cpu.pc + 1] as usize;
                 new_address |= (rom[self.cpu.pc + 2] as usize) << 8;
                 self.cpu.pc = new_address;
+                return 16;
+            }
+            0xEA => {
+                println!("LD (a16),A");
+                let mut address = 0;
+                address |= rom[self.cpu.pc + 1] as usize;
+                address |= (rom[self.cpu.pc + 2] as usize) << 8;
+                self.cpu.memory[address] = self.cpu.regs[Regs::A as usize];
+                self.cpu.pc += 3;
                 return 16;
             }
             0xE0 => {
