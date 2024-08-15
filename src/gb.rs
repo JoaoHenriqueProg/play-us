@@ -171,7 +171,7 @@ impl GameBoyEmulator {
     fn compute(&mut self, rom: &[u8]) -> u64 {
         // returns the cpu cycles it takes, so in the future I can implement real cpu bottleneck
         print!("{:04X}: ", self.cpu.pc);
-        match rom[self.cpu.pc] {
+        match self.cpu.memory[self.cpu.pc] {
             // 5B (LD E,E)
             0 | 0x5B => {
                 println!("NOP");
@@ -219,8 +219,8 @@ impl GameBoyEmulator {
             }
             0x11 => {
                 println!("LD DE,d16");
-                self.cpu.regs[Regs::D as usize] = rom[self.cpu.pc + 1];
-                self.cpu.regs[Regs::E as usize] = rom[self.cpu.pc + 2];
+                self.cpu.regs[Regs::D as usize] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.regs[Regs::E as usize] = self.cpu.memory[self.cpu.pc + 2];
                 self.cpu.pc += 3;
                 return 12;
             }
@@ -266,8 +266,8 @@ impl GameBoyEmulator {
             0x31 => {
                 println!("LD SP,d16");
                 let mut value_d16 = 0;
-                value_d16 |= rom[self.cpu.pc + 1] as usize;
-                value_d16 |= (rom[self.cpu.pc + 2] as usize) << 8;
+                value_d16 |= self.cpu.memory[self.cpu.pc + 1] as usize;
+                value_d16 |= (self.cpu.memory[self.cpu.pc + 2] as usize) << 8;
                 self.cpu.sp = value_d16 as u16;
                 self.cpu.pc += 3;
                 return 12;
@@ -469,16 +469,16 @@ impl GameBoyEmulator {
                 // and this is where I learnt the difference between big and small endian
                 // now I just wonder where else have I not flipped the bytes where I should
                 let mut new_address = 0;
-                new_address |= rom[self.cpu.pc + 1] as usize;
-                new_address |= (rom[self.cpu.pc + 2] as usize) << 8;
+                new_address |= self.cpu.memory[self.cpu.pc + 1] as usize;
+                new_address |= (self.cpu.memory[self.cpu.pc + 2] as usize) << 8;
                 self.cpu.pc = new_address;
                 return 16;
             }
             0xEA => {
                 println!("LD (a16),A");
                 let mut address = 0;
-                address |= rom[self.cpu.pc + 1] as usize;
-                address |= (rom[self.cpu.pc + 2] as usize) << 8;
+                address |= self.cpu.memory[self.cpu.pc + 1] as usize;
+                address |= (self.cpu.memory[self.cpu.pc + 2] as usize) << 8;
                 self.cpu.memory[address] = self.cpu.regs[Regs::A as usize];
                 self.cpu.pc += 3;
                 return 16;
@@ -523,7 +523,7 @@ impl GameBoyEmulator {
                 self.print_regs();
                 todo!(
                     "{:02X}\nPC: {:04X} | {}",
-                    rom[self.cpu.pc],
+                    self.cpu.memory[self.cpu.pc],
                     self.cpu.pc,
                     self.cpu.pc
                 )
