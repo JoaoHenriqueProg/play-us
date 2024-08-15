@@ -17,10 +17,19 @@ impl Cpu {
             bus_8: 0,
             bus_16: 0,
             memory: [0; 1024 * 64],
-            regs: [0; 8],
+            regs: [
+                0x01, // A
+                0xB0, // F
+                0x00, // B
+                0x13, // C
+                0x00, // D
+                0xD8, // E
+                0x01, // H
+                0x4D, // L
+            ],
             pc: 0x100,
             ime: false,
-            sp: 0xFFFE
+            sp: 0xFFFE,
         }
     }
 }
@@ -135,10 +144,26 @@ impl GameBoyEmulator {
     }
 
     fn print_regs(&self) {
-        println!("A={:02X} F={:02X}", self.cpu.regs[Regs::A as usize], self.cpu.regs[Regs::F as usize]);
-        println!("B={:02X} C={:02X}", self.cpu.regs[Regs::B as usize], self.cpu.regs[Regs::H as usize]);
-        println!("D={:02X} E={:02X}", self.cpu.regs[Regs::D as usize], self.cpu.regs[Regs::E as usize]);
-        println!("H={:02X} L={:02X}", self.cpu.regs[Regs::H as usize], self.cpu.regs[Regs::L as usize]);
+        println!(
+            "A={:02X} F={:02X}",
+            self.cpu.regs[Regs::A as usize],
+            self.cpu.regs[Regs::F as usize]
+        );
+        println!(
+            "B={:02X} C={:02X}",
+            self.cpu.regs[Regs::B as usize],
+            self.cpu.regs[Regs::C as usize]
+        );
+        println!(
+            "D={:02X} E={:02X}",
+            self.cpu.regs[Regs::D as usize],
+            self.cpu.regs[Regs::E as usize]
+        );
+        println!(
+            "H={:02X} L={:02X}",
+            self.cpu.regs[Regs::H as usize],
+            self.cpu.regs[Regs::L as usize]
+        );
     }
 
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
@@ -432,6 +457,10 @@ impl GameBoyEmulator {
             0xAF => {
                 println!("XOR A");
                 self.cpu.regs[Regs::A as usize] = 0;
+                self.set_z_flag(true);
+                self.set_c_flag(false);
+                self.set_h_flag(false);
+                self.set_n_flag(false);
                 self.cpu.pc += 1;
                 return 4;
             }
@@ -493,11 +522,12 @@ impl GameBoyEmulator {
                 println!();
                 self.print_regs();
                 todo!(
-                "{:02X}\nPC: {:04X} | {}",
-                rom[self.cpu.pc],
-                self.cpu.pc,
-                self.cpu.pc
-            )},
+                    "{:02X}\nPC: {:04X} | {}",
+                    rom[self.cpu.pc],
+                    self.cpu.pc,
+                    self.cpu.pc
+                )
+            }
         }
     }
 }
@@ -511,8 +541,18 @@ impl Emulator for GameBoyEmulator {
 
         self.cpu.memory[0..rom.len()].copy_from_slice(rom);
 
+        // let mut steps = 4;
         loop {
+            // if steps == 0 {
+            //     self.print_regs();
+            //     break;
+            // }
             self.compute(rom);
+            // if self.cpu.pc == 0x100 {
+            //     self.print_regs();
+            //     break;
+            // }
+            steps -= 1;
         }
     }
 }
