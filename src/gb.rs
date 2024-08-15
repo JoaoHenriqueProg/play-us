@@ -38,17 +38,15 @@ pub struct GameBoyEmulator {
     cpu: Cpu,
 }
 
-#[derive(Clone, Copy)]
-enum Regs {
-    A,
-    F,
-    B,
-    C,
-    D,
-    E,
-    H,
-    L,
-}
+type Regs = usize;
+const RegA: usize = 0;
+const RegF: usize = 1;
+const RegB: usize = 2;
+const RegC: usize = 3;
+const RegD: usize = 4;
+const RegE: usize = 5;
+const RegH: usize = 6;
+const RegL: usize = 7;
 
 impl GameBoyEmulator {
     pub fn new() -> GameBoyEmulator {
@@ -59,10 +57,10 @@ impl GameBoyEmulator {
     fn set_n_flag(&mut self, state: bool) {
         match state {
             true => {
-                self.cpu.regs[Regs::F as usize] = self.cpu.regs[Regs::F as usize] | 1 << 6;
+                self.cpu.regs[RegF] = self.cpu.regs[RegF] | 1 << 6;
             }
             false => {
-                self.cpu.regs[Regs::F as usize] = self.cpu.regs[Regs::F as usize] & !(1 << 6);
+                self.cpu.regs[RegF] = self.cpu.regs[RegF] & !(1 << 6);
             }
         }
     }
@@ -71,26 +69,26 @@ impl GameBoyEmulator {
     fn set_z_flag(&mut self, state: bool) {
         match state {
             true => {
-                self.cpu.regs[Regs::F as usize] = self.cpu.regs[Regs::F as usize] | 1 << 7;
+                self.cpu.regs[RegF] = self.cpu.regs[RegF] | 1 << 7;
             }
             false => {
-                self.cpu.regs[Regs::F as usize] = self.cpu.regs[Regs::F as usize] & !(1 << 7);
+                self.cpu.regs[RegF] = self.cpu.regs[RegF] & !(1 << 7);
             }
         }
     }
     #[inline]
     fn get_z_flag(&mut self) -> bool {
-        self.cpu.regs[Regs::F as usize] & (1 << 7) != 0
+        self.cpu.regs[RegF] & (1 << 7) != 0
     }
 
     #[inline]
     fn set_h_flag(&mut self, state: bool) {
         match state {
             true => {
-                self.cpu.regs[Regs::F as usize] = self.cpu.regs[Regs::F as usize] | 1 << 5;
+                self.cpu.regs[RegF] = self.cpu.regs[RegF] | 1 << 5;
             }
             false => {
-                self.cpu.regs[Regs::F as usize] = self.cpu.regs[Regs::F as usize] & !(1 << 5);
+                self.cpu.regs[RegF] = self.cpu.regs[RegF] & !(1 << 5);
             }
         }
     }
@@ -99,70 +97,65 @@ impl GameBoyEmulator {
     fn set_c_flag(&mut self, state: bool) {
         match state {
             true => {
-                self.cpu.regs[Regs::F as usize] = self.cpu.regs[Regs::F as usize] | 1 << 4;
+                self.cpu.regs[RegF] = self.cpu.regs[RegF] | 1 << 4;
             }
             false => {
-                self.cpu.regs[Regs::F as usize] = self.cpu.regs[Regs::F as usize] & !(1 << 4);
+                self.cpu.regs[RegF] = self.cpu.regs[RegF] & !(1 << 4);
             }
         }
     }
 
     #[inline]
     fn reg_inc_a(&mut self, to_inc: u8) {
-        self.cpu.regs[Regs::A as usize] = self.cpu.regs[Regs::A as usize].wrapping_add(to_inc);
+        self.cpu.regs[RegA] = self.cpu.regs[RegA].wrapping_add(to_inc);
     }
     #[inline]
     fn reg_dec_b(&mut self, to_dec: u8) {
-        self.cpu.regs[Regs::B as usize] = self.cpu.regs[Regs::B as usize].wrapping_sub(to_dec);
+        self.cpu.regs[RegB] = self.cpu.regs[RegB].wrapping_sub(to_dec);
     }
     fn reg_dec_c(&mut self, to_dec: u8) {
-        self.cpu.regs[Regs::B as usize] = self.cpu.regs[Regs::C as usize].wrapping_sub(to_dec);
+        self.cpu.regs[RegB] = self.cpu.regs[RegC].wrapping_sub(to_dec);
     }
     #[inline]
     fn reg_inc_l(&mut self, to_inc: u8) {
-        self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::L as usize].wrapping_add(to_inc);
+        self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_add(to_inc);
     }
 
     #[inline]
     fn get_hl(&self) -> u16 {
-        ((self.cpu.regs[Regs::H as usize] as u16) << 8) | self.cpu.regs[Regs::L as usize] as u16
+        ((self.cpu.regs[RegH] as u16) << 8) | self.cpu.regs[RegL] as u16
     }
 
     #[inline]
     fn sub_reg_from_a(&mut self, reg: Regs) {
-        let half_a: u8 = self.cpu.regs[Regs::A as usize] & 0x0F;
-        let half_r = self.cpu.regs[reg.clone() as usize] & 0x0F;
+        let half_a: u8 = self.cpu.regs[RegA] & 0x0F;
+        let half_r = self.cpu.regs[reg.clone()] & 0x0F;
         self.set_h_flag(half_a < half_r);
 
-        self.set_c_flag(self.cpu.regs[reg as usize] > self.cpu.regs[Regs::A as usize]);
+        self.set_c_flag(self.cpu.regs[reg] > self.cpu.regs[RegA]);
 
-        self.cpu.regs[Regs::A as usize] =
-            self.cpu.regs[Regs::A as usize].wrapping_sub(self.cpu.regs[reg as usize]);
+        self.cpu.regs[RegA] = self.cpu.regs[RegA].wrapping_sub(self.cpu.regs[reg]);
 
-        self.set_z_flag(self.cpu.regs[Regs::A as usize] == 0);
+        self.set_z_flag(self.cpu.regs[RegA] == 0);
         self.set_n_flag(true);
     }
 
     fn print_regs(&self) {
         println!(
             "A={:02X} F={:02X}",
-            self.cpu.regs[Regs::A as usize],
-            self.cpu.regs[Regs::F as usize]
+            self.cpu.regs[RegA], self.cpu.regs[RegF]
         );
         println!(
             "B={:02X} C={:02X}",
-            self.cpu.regs[Regs::B as usize],
-            self.cpu.regs[Regs::C as usize]
+            self.cpu.regs[RegB], self.cpu.regs[RegC]
         );
         println!(
             "D={:02X} E={:02X}",
-            self.cpu.regs[Regs::D as usize],
-            self.cpu.regs[Regs::E as usize]
+            self.cpu.regs[RegD], self.cpu.regs[RegE]
         );
         println!(
             "H={:02X} L={:02X}",
-            self.cpu.regs[Regs::H as usize],
-            self.cpu.regs[Regs::L as usize]
+            self.cpu.regs[RegH], self.cpu.regs[RegL]
         );
     }
 
@@ -181,46 +174,46 @@ impl GameBoyEmulator {
             0x05 => {
                 // check for half carry
                 println!("DEC B");
-                let half_b = self.cpu.regs[Regs::B as usize] & 0x0F;
+                let half_b = self.cpu.regs[RegB] & 0x0F;
                 let half_one = 1 & 0x0F;
                 self.set_h_flag(half_b < half_one);
 
                 self.reg_dec_b(1);
 
-                self.set_z_flag(self.cpu.regs[Regs::B as usize] == 0);
+                self.set_z_flag(self.cpu.regs[RegB] == 0);
                 self.set_n_flag(true);
                 self.cpu.pc += 1;
                 return 4;
             }
             0x06 => {
                 println!("LD B,d8");
-                self.cpu.regs[Regs::B as usize] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.regs[RegB] = self.cpu.memory[self.cpu.pc + 1];
                 self.cpu.pc += 2;
                 return 8;
             }
             0x0D => {
                 println!("DEC C");
-                let half_c = self.cpu.regs[Regs::C as usize] & 0x0F;
+                let half_c = self.cpu.regs[RegC] & 0x0F;
                 let half_one = 1 & 0x0F;
                 self.set_h_flag(half_c < half_one);
 
                 self.reg_dec_c(1);
 
-                self.set_z_flag(self.cpu.regs[Regs::C as usize] == 0);
+                self.set_z_flag(self.cpu.regs[RegC] == 0);
                 self.set_n_flag(true);
                 self.cpu.pc += 1;
                 return 4;
             }
             0x0E => {
                 println!("LD C,d8");
-                self.cpu.regs[Regs::C as usize] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.regs[RegC] = self.cpu.memory[self.cpu.pc + 1];
                 self.cpu.pc += 2;
                 return 8;
             }
             0x11 => {
                 println!("LD DE,d16");
-                self.cpu.regs[Regs::D as usize] = self.cpu.memory[self.cpu.pc + 1];
-                self.cpu.regs[Regs::E as usize] = self.cpu.memory[self.cpu.pc + 2];
+                self.cpu.regs[RegD] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.regs[RegE] = self.cpu.memory[self.cpu.pc + 2];
                 self.cpu.pc += 3;
                 return 12;
             }
@@ -244,21 +237,21 @@ impl GameBoyEmulator {
                 println!("LD HL,d16");
                 // regs -> h l -- mem -> x y
                 //         y x
-                self.cpu.regs[Regs::L as usize] = self.cpu.memory[self.cpu.pc + 1];
-                self.cpu.regs[Regs::H as usize] = self.cpu.memory[self.cpu.pc + 2];
+                self.cpu.regs[RegL] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.regs[RegH] = self.cpu.memory[self.cpu.pc + 2];
                 self.cpu.pc += 3;
                 return 12;
             }
             0x2C => {
                 println!("INC L");
                 // check for half carry first of all
-                let half_reg = self.cpu.regs[Regs::L as usize] & 0x0F;
+                let half_reg = self.cpu.regs[RegL] & 0x0F;
                 let half_inc = 1;
 
                 self.reg_inc_l(1);
 
                 self.set_n_flag(false);
-                self.set_z_flag(self.cpu.regs[Regs::L as usize] == 0);
+                self.set_z_flag(self.cpu.regs[RegL] == 0);
                 self.set_h_flag(half_inc + half_reg > 0xF);
                 self.cpu.pc += 1;
                 return 4;
@@ -274,12 +267,11 @@ impl GameBoyEmulator {
             }
             0x32 => {
                 println!("LD (HL-),A");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::A as usize];
-                self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::L as usize].wrapping_sub(1);
-                if self.cpu.regs[Regs::L as usize] == 255 {
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegA];
+                self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_sub(1);
+                if self.cpu.regs[RegL] == 255 {
                     // number wraped around
-                    self.cpu.regs[Regs::H as usize] =
-                        self.cpu.regs[Regs::H as usize].wrapping_sub(1);
+                    self.cpu.regs[RegH] = self.cpu.regs[RegH].wrapping_sub(1);
                 }
                 self.cpu.pc += 1;
                 return 8;
@@ -293,170 +285,170 @@ impl GameBoyEmulator {
             0x3C => {
                 println!("INC A");
                 // check for half carry first of all
-                let half_reg = self.cpu.regs[Regs::A as usize] & 0x0F;
+                let half_reg = self.cpu.regs[RegA] & 0x0F;
                 let half_inc = 1;
 
                 self.reg_inc_a(1);
 
                 self.set_n_flag(false);
-                self.set_z_flag(self.cpu.regs[Regs::A as usize] == 0);
+                self.set_z_flag(self.cpu.regs[RegA] == 0);
                 self.set_h_flag(half_inc + half_reg > 0xF);
                 self.cpu.pc += 1;
                 return 4;
             }
             0x3E => {
                 println!("LD A,d8");
-                self.cpu.regs[Regs::A as usize] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.regs[RegA] = self.cpu.memory[self.cpu.pc + 1];
                 self.cpu.pc += 2;
                 return 8;
             }
             0x4A => {
                 println!("LD C,D");
-                self.cpu.regs[Regs::C as usize] = self.cpu.regs[Regs::D as usize];
+                self.cpu.regs[RegC] = self.cpu.regs[RegD];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x4B => {
                 println!("LD C,E");
-                self.cpu.regs[Regs::C as usize] = self.cpu.regs[Regs::E as usize];
+                self.cpu.regs[RegC] = self.cpu.regs[RegE];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x53 => {
                 println!("LD D,E");
-                self.cpu.regs[Regs::D as usize] = self.cpu.regs[Regs::E as usize];
+                self.cpu.regs[RegD] = self.cpu.regs[RegE];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x55 => {
                 println!("LD D,L");
-                self.cpu.regs[Regs::D as usize] = self.cpu.regs[Regs::L as usize];
+                self.cpu.regs[RegD] = self.cpu.regs[RegL];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x56 => {
                 println!("LD D,(HL)");
-                self.cpu.regs[Regs::D as usize] = self.cpu.memory[self.get_hl() as usize];
+                self.cpu.regs[RegD] = self.cpu.memory[self.get_hl() as usize];
                 self.cpu.pc += 1;
                 return 8;
             }
             0x57 => {
                 println!("LD D,A");
-                self.cpu.regs[Regs::D as usize] = self.cpu.regs[Regs::A as usize];
+                self.cpu.regs[RegD] = self.cpu.regs[RegA];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x58 => {
                 println!("LD E,B");
-                self.cpu.regs[Regs::E as usize] = self.cpu.regs[Regs::B as usize];
+                self.cpu.regs[RegE] = self.cpu.regs[RegB];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x59 => {
                 println!("LD E,C");
-                self.cpu.regs[Regs::E as usize] = self.cpu.regs[Regs::C as usize];
+                self.cpu.regs[RegE] = self.cpu.regs[RegC];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x5A => {
                 println!("LD E,D");
-                self.cpu.regs[Regs::E as usize] = self.cpu.regs[Regs::D as usize];
+                self.cpu.regs[RegE] = self.cpu.regs[RegD];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x5C => {
                 println!("LD E,H");
-                self.cpu.regs[Regs::E as usize] = self.cpu.regs[Regs::H as usize];
+                self.cpu.regs[RegE] = self.cpu.regs[RegH];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x6C => {
                 println!("LD L,H");
-                self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::H as usize];
+                self.cpu.regs[RegL] = self.cpu.regs[RegH];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x6E => {
                 println!("LD L,(HL)");
-                self.cpu.regs[Regs::L as usize] = self.cpu.memory[self.get_hl() as usize];
+                self.cpu.regs[RegL] = self.cpu.memory[self.get_hl() as usize];
                 self.cpu.pc += 1;
                 return 8;
             }
             0x6F => {
                 println!("LD L,A");
-                self.cpu.regs[Regs::L as usize] = self.cpu.regs[Regs::A as usize];
+                self.cpu.regs[RegL] = self.cpu.regs[RegA];
                 self.cpu.pc += 1;
                 return 4;
             }
             0x71 => {
                 println!("LD (HL),C");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::C as usize];
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegC];
                 self.cpu.pc += 1;
                 return 8;
             }
             0x72 => {
                 println!("LD (HL),D");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::D as usize];
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegD];
                 self.cpu.pc += 1;
                 return 8;
             }
             0x73 => {
                 println!("LD (HL),E");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::E as usize];
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegE];
                 self.cpu.pc += 1;
                 return 8;
             }
             0x74 => {
                 println!("LD (HL),H");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::H as usize];
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegH];
                 self.cpu.pc += 1;
                 return 8;
             }
             0x75 => {
                 println!("LD (HL),L");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[Regs::L as usize];
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegL];
                 self.cpu.pc += 1;
                 return 8;
             }
             0x90 => {
                 println!("SUB B");
-                self.sub_reg_from_a(Regs::B);
+                self.sub_reg_from_a(RegB);
                 self.cpu.pc += 1;
                 return 4;
             }
             0x91 => {
                 println!("SUB C");
-                self.sub_reg_from_a(Regs::C);
+                self.sub_reg_from_a(RegC);
                 self.cpu.pc += 1;
                 return 4;
             }
             0x92 => {
                 println!("SUB D");
-                self.sub_reg_from_a(Regs::D);
+                self.sub_reg_from_a(RegD);
                 self.cpu.pc += 1;
                 return 4;
             }
             0x93 => {
                 println!("SUB E");
-                self.sub_reg_from_a(Regs::E);
+                self.sub_reg_from_a(RegE);
                 self.cpu.pc += 1;
                 return 4;
             }
             0x94 => {
                 println!("SUB H");
-                self.sub_reg_from_a(Regs::H);
+                self.sub_reg_from_a(RegH);
                 self.cpu.pc += 1;
                 return 4;
             }
             0x95 => {
                 println!("SUB L");
-                self.sub_reg_from_a(Regs::L);
+                self.sub_reg_from_a(RegL);
                 self.cpu.pc += 1;
                 return 4;
             }
             0xAF => {
                 println!("XOR A");
-                self.cpu.regs[Regs::A as usize] = 0;
+                self.cpu.regs[RegA] = 0;
                 self.set_z_flag(true);
                 self.set_c_flag(false);
                 self.set_h_flag(false);
@@ -471,7 +463,7 @@ impl GameBoyEmulator {
                 let mut new_address = 0;
                 new_address |= self.cpu.memory[self.cpu.pc + 1] as usize;
                 new_address |= (self.cpu.memory[self.cpu.pc + 2] as usize) << 8;
-                self.cpu.pc = new_address;
+                self.cpu.pc = new_address as usize;
                 return 16;
             }
             0xEA => {
@@ -479,20 +471,20 @@ impl GameBoyEmulator {
                 let mut address = 0;
                 address |= self.cpu.memory[self.cpu.pc + 1] as usize;
                 address |= (self.cpu.memory[self.cpu.pc + 2] as usize) << 8;
-                self.cpu.memory[address] = self.cpu.regs[Regs::A as usize];
+                self.cpu.memory[address as usize] = self.cpu.regs[RegA];
                 self.cpu.pc += 3;
                 return 16;
             }
             0xE0 => {
                 println!("LDH (a8),A");
                 self.cpu.memory[self.cpu.memory[self.cpu.pc + 1] as usize + 0xFF00] =
-                    self.cpu.regs[Regs::A as usize];
+                    self.cpu.regs[RegA];
                 self.cpu.pc += 2;
                 return 12;
             }
             0xF0 => {
                 println!("LDH A,(a8)");
-                self.cpu.regs[Regs::A as usize] =
+                self.cpu.regs[RegA] =
                     self.cpu.memory[self.cpu.memory[self.cpu.pc + 1] as usize + 0xFF00];
                 self.cpu.pc += 2;
                 return 12;
@@ -506,13 +498,14 @@ impl GameBoyEmulator {
             0xFE => {
                 println!("CP d8");
                 let value = self.cpu.memory[self.cpu.pc + 1];
-                let half_a: u8 = self.cpu.regs[Regs::A as usize] & 0x0F;
+                let half_a: u8 = self.cpu.regs[RegA] & 0x0F;
+                // todo: fix this
                 let half_v = self.cpu.regs[value as usize] & 0x0F;
                 self.set_h_flag(half_a < half_v);
 
-                self.set_c_flag(value > self.cpu.regs[Regs::A as usize]);
+                self.set_c_flag(value > self.cpu.regs[RegA]);
 
-                let result = self.cpu.regs[Regs::A as usize].wrapping_sub(value);
+                let result = self.cpu.regs[RegA].wrapping_sub(value);
                 self.set_z_flag(result == 0);
                 self.set_n_flag(true);
                 self.cpu.pc += 1;
