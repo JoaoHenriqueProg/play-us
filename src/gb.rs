@@ -134,6 +134,13 @@ impl GameBoyEmulator {
         self.set_n_flag(true);
     }
 
+    fn print_regs(&self) {
+        println!("A={:02X} F={:02X}", self.cpu.regs[Regs::A as usize], self.cpu.regs[Regs::F as usize]);
+        println!("B={:02X} C={:02X}", self.cpu.regs[Regs::B as usize], self.cpu.regs[Regs::H as usize]);
+        println!("D={:02X} E={:02X}", self.cpu.regs[Regs::D as usize], self.cpu.regs[Regs::E as usize]);
+        println!("H={:02X} L={:02X}", self.cpu.regs[Regs::H as usize], self.cpu.regs[Regs::L as usize]);
+    }
+
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
     // the game boy architecture and stuff
     fn compute(&mut self, rom: &[u8]) -> u64 {
@@ -230,6 +237,15 @@ impl GameBoyEmulator {
                 self.set_h_flag(half_inc + half_reg > 0xF);
                 self.cpu.pc += 1;
                 return 4;
+            }
+            0x31 => {
+                println!("LD SP,d16");
+                let mut value_d16 = 0;
+                value_d16 |= rom[self.cpu.pc + 1] as usize;
+                value_d16 |= (rom[self.cpu.pc + 2] as usize) << 8;
+                self.cpu.sp = value_d16 as u16;
+                self.cpu.pc += 1;
+                return 12;
             }
             0x32 => {
                 println!("LD (HL-),A");
@@ -473,12 +489,15 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
-            _ => todo!(
+            _ => {
+                println!();
+                self.print_regs();
+                todo!(
                 "{:02X}\nPC: {:04X} | {}",
                 rom[self.cpu.pc],
                 self.cpu.pc,
                 self.cpu.pc
-            ),
+            )},
         }
     }
 }
