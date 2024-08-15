@@ -552,7 +552,7 @@ impl Emulator for GameBoyEmulator {
             //     self.print_regs();
             //     break;
             // }
-            steps -= 1;
+            // steps -= 1;
         }
     }
 }
