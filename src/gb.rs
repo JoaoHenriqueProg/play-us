@@ -18,7 +18,7 @@ impl Cpu {
             memory: [0; 1024 * 64],
             regs: [0; 8],
             pc: 0x100,
-            ime: false
+            ime: false,
         }
     }
 }
@@ -266,7 +266,7 @@ impl GameBoyEmulator {
             0x3E => {
                 println!("LD A,d8");
                 self.cpu.pc += 1;
-                self.cpu.regs[Regs::A as usize] =  self.cpu.memory[self.cpu.pc];
+                self.cpu.regs[Regs::A as usize] = self.cpu.memory[self.cpu.pc];
                 self.cpu.pc += 1;
                 return 8;
             }
@@ -378,29 +378,6 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
-            0xAF => {
-                println!("XOR A");
-                self.cpu.regs[Regs::A as usize] = 0;
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0xC3 => {
-                println!("JMP a16");
-                // and this is where I learnt the difference between big and small endian
-                // now I just wonder where else have I not flipped the bytes where I should
-                let mut new_address = 0;
-                self.cpu.pc += 1;
-                new_address |= rom[self.cpu.pc] as usize;
-                self.cpu.pc += 1;
-                new_address |= (rom[self.cpu.pc] as usize) << 8;
-                self.cpu.pc = new_address;
-                return 16;
-            }
-            0xF3 => {
-                self.cpu.ime = false;
-                self.cpu.pc += 1;
-                return 4;
-            }
             0x90 => {
                 println!("SUB B");
                 self.sub_reg_from_a(Regs::B);
@@ -434,6 +411,30 @@ impl GameBoyEmulator {
             0x95 => {
                 println!("SUB L");
                 self.sub_reg_from_a(Regs::L);
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0xAF => {
+                println!("XOR A");
+                self.cpu.regs[Regs::A as usize] = 0;
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0xC3 => {
+                println!("JMP a16");
+                // and this is where I learnt the difference between big and small endian
+                // now I just wonder where else have I not flipped the bytes where I should
+                let mut new_address = 0;
+                self.cpu.pc += 1;
+                new_address |= rom[self.cpu.pc] as usize;
+                self.cpu.pc += 1;
+                new_address |= (rom[self.cpu.pc] as usize) << 8;
+                self.cpu.pc = new_address;
+                return 16;
+            }
+            0xF3 => {
+                println!("DI");
+                self.cpu.ime = false;
                 self.cpu.pc += 1;
                 return 4;
             }
