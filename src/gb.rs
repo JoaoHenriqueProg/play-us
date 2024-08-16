@@ -280,7 +280,7 @@ impl GameBoyEmulator {
                 address |= ((self.get_hl() & 0x0F) as usize) << 8; // putting l left
                 address |= ((self.get_hl() & 0xF0) as usize) >> 8; // putting h right
                                                                    // by the gods please be it ? I'm not sure
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegA]; // SINCE WHEN WAS THIS LINE COMMENTED
+                self.cpu.memory[address as usize] = self.cpu.regs[RegA]; // SINCE WHEN WAS THIS LINE COMMENTED
                 self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_sub(1);
 
                 if self.cpu.regs[RegL] == 255 {
