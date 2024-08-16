@@ -217,7 +217,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 2;
                 return 8;
             }
-            0x0D => {
+            0x0C => {
                 println!("INC C");
                 self.op_inc_reg(RegC);
                 self.cpu.pc += 1;
