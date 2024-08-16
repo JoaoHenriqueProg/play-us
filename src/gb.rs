@@ -269,7 +269,10 @@ impl GameBoyEmulator {
             }
             0x2A => {
                 println!("LD A,(HL+)");
-                self.cpu.regs[RegA] = self.cpu.memory[self.get_hl() as usize]; // SINCE WHEN WAS THIS LINE COMMENTED
+                let mut address = 0;
+                address |= ((self.get_hl() & 0x0F) as usize) << 8; // putting l left
+                address |= ((self.get_hl() & 0xF0) as usize) >> 8; // putting h right
+                self.cpu.regs[RegA] = self.cpu.memory[address]; // SINCE WHEN WAS THIS LINE COMMENTED
                 self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_add(1);
 
                 if self.cpu.regs[RegL] == 0 {
@@ -523,7 +526,7 @@ impl GameBoyEmulator {
                 // I spent almost a whole day trying to find out why where the game in an infinite loop
                 // Till I had the great idea of using the concept of "searching online"
                 // Turns out the game keeps waiting for the game to draw, which is when 0xFF44 (the y lcd counter)
-                // Is 148 (or whatever it is in hex)  
+                // Is 148 (or whatever it is in hex)
                 self.cpu.pc += 2;
                 return 12;
             }
