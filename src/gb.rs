@@ -493,6 +493,12 @@ impl GameBoyEmulator {
                 self.cpu.pc = new_address as usize;
                 return 16;
             }
+            0xE2 => {
+                println!("LD (C),A");
+                self.cpu.memory[self.cpu.regs[RegC] as usize] = self.cpu.regs[RegA];
+                self.cpu.pc += 1;
+                return 8;
+            }
             0xEA => {
                 println!("LD (a16),A");
                 let mut address = 0;
@@ -565,18 +571,27 @@ impl Emulator for GameBoyEmulator {
 
         self.cpu.memory[0..rom.len()].copy_from_slice(rom);
 
+        let mut cycles_count = 0;
         // let mut steps = 4;
         loop {
             // if steps == 0 {
             //     self.print_regs();
             //     break;
             // }
-            self.compute(rom);
+            cycles_count += self.compute(rom);
             // if self.cpu.pc == 0x100 {
             //     self.print_regs();
             //     break;
             // }
             // steps -= 1;
+
+            if (cycles_count > 456) {
+                // draw scan line
+                self.cpu.memory[0xff44] += 1;
+                if self.cpu.memory[0xff44] > 154 {
+                    self.cpu.memory[0xff44] = 0;
+                }
+            }
         }
     }
 }
