@@ -114,7 +114,7 @@ impl GameBoyEmulator {
         self.cpu.regs[RegB] = self.cpu.regs[RegB].wrapping_sub(to_dec);
     }
     fn reg_dec_c(&mut self, to_dec: u8) {
-        self.cpu.regs[RegB] = self.cpu.regs[RegC].wrapping_sub(to_dec);
+        self.cpu.regs[RegC] = self.cpu.regs[RegC].wrapping_sub(to_dec);
     }
     #[inline]
     fn reg_inc_l(&mut self, to_inc: u8) {
@@ -164,6 +164,12 @@ impl GameBoyEmulator {
     fn compute(&mut self, rom: &[u8]) -> u64 {
         // returns the cpu cycles it takes, so in the future I can implement real cpu bottleneck
         print!("{:04X}: ", self.cpu.pc);
+        let checked_functions: [u8; 6] = [
+            0, 0xC3, 0xAF, 0x21, 0x0E, 0x06
+        ];
+        if !checked_functions.contains(&self.cpu.memory[self.cpu.pc]) {
+            // panic!("{:02X}", self.cpu.memory[self.cpu.pc])
+        }
         match self.cpu.memory[self.cpu.pc] {
             // 5B (LD E,E)
             0 | 0x5B => {
@@ -267,7 +273,11 @@ impl GameBoyEmulator {
             }
             0x32 => {
                 println!("LD (HL-),A");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegA];
+                let mut address = 0;
+                address |= ((self.get_hl() & 0x0F) as usize) << 8; // putting l left
+                address |= ((self.get_hl() & 0xF0) as usize) >> 8; // putting r right
+                // by the gods please be it
+                self.cpu.memory[address] = self.cpu.regs[RegA];
                 self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_sub(1);
                 if self.cpu.regs[RegL] == 255 {
                     // number wraped around
