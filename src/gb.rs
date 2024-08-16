@@ -224,7 +224,7 @@ impl GameBoyEmulator {
                 return 12;
             }
             0x20 => {
-                println!("JR NR,r8");
+                println!("JR NZ,r8");
                 // com branch: 12
                 // sem branch: 8
                 if self.get_z_flag() {
