@@ -175,6 +175,16 @@ impl GameBoyEmulator {
         self.set_z_flag(self.cpu.regs[reg] == 0);
         self.set_n_flag(true);
     }
+    fn op_inc_reg(&mut self, reg: Regs) {
+        let half_reg = self.cpu.regs[reg] & 0x0F;
+        let half_inc = 1;
+
+        self.cpu.regs[reg] = self.cpu.regs[reg].wrapping_add(1);
+
+        self.set_n_flag(false);
+        self.set_z_flag(self.cpu.regs[reg] == 0);
+        self.set_h_flag(half_inc + half_reg > 0xF);
+    }
 
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
     // the game boy architecture and stuff
@@ -206,6 +216,12 @@ impl GameBoyEmulator {
                 self.cpu.regs[RegB] = self.cpu.memory[self.cpu.pc + 1];
                 self.cpu.pc += 2;
                 return 8;
+            }
+            0x0D => {
+                println!("INC C");
+                self.op_inc_reg(RegC);
+                self.cpu.pc += 1;
+                return 4;
             }
             0x0D => {
                 println!("DEC C");
@@ -251,17 +267,22 @@ impl GameBoyEmulator {
                 self.cpu.pc += 3;
                 return 12;
             }
+            0x2A => {
+                println!("LD A,(HL+)");
+                self.cpu.regs[RegA] = self.cpu.memory[self.get_hl() as usize]; // SINCE WHEN WAS THIS LINE COMMENTED
+                self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_add(1);
+
+                if self.cpu.regs[RegL] == 0 {
+                    // number wraped around
+                    self.cpu.regs[RegH] = self.cpu.regs[RegH].wrapping_add(1);
+                }
+                self.cpu.pc += 1;
+                return 8;
+            }
             0x2C => {
                 println!("INC L");
                 // check for half carry first of all
-                let half_reg = self.cpu.regs[RegL] & 0x0F;
-                let half_inc = 1;
-
-                self.reg_inc_l(1);
-
-                self.set_n_flag(false);
-                self.set_z_flag(self.cpu.regs[RegL] == 0);
-                self.set_h_flag(half_inc + half_reg > 0xF);
+                self.op_inc_reg(RegL);
                 self.cpu.pc += 1;
                 return 4;
             }
@@ -298,15 +319,7 @@ impl GameBoyEmulator {
             }
             0x3C => {
                 println!("INC A");
-                // check for half carry first of all
-                let half_reg = self.cpu.regs[RegA] & 0x0F;
-                let half_inc = 1;
-
-                self.reg_inc_a(1);
-
-                self.set_n_flag(false);
-                self.set_z_flag(self.cpu.regs[RegA] == 0);
-                self.set_h_flag(half_inc + half_reg > 0xF);
+                self.op_inc_reg(RegA);
                 self.cpu.pc += 1;
                 return 4;
             }
