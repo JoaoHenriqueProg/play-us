@@ -53,6 +53,19 @@ impl GameBoyEmulator {
         GameBoyEmulator { cpu: Cpu::new() }
     }
 
+    fn set_hram(&mut self, address: usize, value: u8) {
+        self.cpu.memory[address + 0xFF00] = value;
+        println!("Set {value} at {address} (or {}) of hram", address + 0xFF00);
+    }
+    fn get_hram(&mut self, address: usize) -> u8 {
+        println!(
+            "Got {} at {address} (or {}) of hram",
+            self.cpu.memory[address + 0xFF00],
+            address + 0xFF00
+        );
+        return self.cpu.memory[address + 0xFF00];
+    }
+
     #[inline]
     fn set_n_flag(&mut self, state: bool) {
         match state {
@@ -110,13 +123,6 @@ impl GameBoyEmulator {
         self.cpu.regs[RegA] = self.cpu.regs[RegA].wrapping_add(to_inc);
     }
     #[inline]
-    fn reg_dec_b(&mut self, to_dec: u8) {
-        self.cpu.regs[RegB] = self.cpu.regs[RegB].wrapping_sub(to_dec);
-    }
-    fn reg_dec_c(&mut self, to_dec: u8) {
-        self.cpu.regs[RegC] = self.cpu.regs[RegC].wrapping_sub(to_dec);
-    }
-    #[inline]
     fn reg_inc_l(&mut self, to_inc: u8) {
         self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_add(to_inc);
     }
@@ -159,13 +165,24 @@ impl GameBoyEmulator {
         );
     }
 
+    fn op_dec_reg(&mut self, reg: Regs) {
+        let half_reg = self.cpu.regs[reg] & 0x0F;
+        let half_one = 1;
+        self.set_h_flag(half_reg < half_one);
+
+        self.cpu.regs[reg] = self.cpu.regs[reg].wrapping_sub(1);
+
+        self.set_z_flag(self.cpu.regs[reg] == 0);
+        self.set_n_flag(true);
+    }
+
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
     // the game boy architecture and stuff
     fn compute(&mut self, rom: &[u8]) -> u64 {
         // returns the cpu cycles it takes, so in the future I can implement real cpu bottleneck
         print!("{:04X}: ", self.cpu.pc);
-        let checked_functions: [u8; 6] = [
-            0, 0xC3, 0xAF, 0x21, 0x0E, 0x06
+        let checked_functions: [u8; 15] = [
+            0, 0xC3, 0xAF, 0x21, 0x0E, 0x06, 0x32, 0x05, 0x20, 0x0D, 0x3E, 0xF3, 0xE0, 0xF0, 0xFE,
         ];
         if !checked_functions.contains(&self.cpu.memory[self.cpu.pc]) {
             // panic!("{:02X}", self.cpu.memory[self.cpu.pc])
@@ -180,14 +197,7 @@ impl GameBoyEmulator {
             0x05 => {
                 // check for half carry
                 println!("DEC B");
-                let half_b = self.cpu.regs[RegB] & 0x0F;
-                let half_one = 1 & 0x0F;
-                self.set_h_flag(half_b < half_one);
-
-                self.reg_dec_b(1);
-
-                self.set_z_flag(self.cpu.regs[RegB] == 0);
-                self.set_n_flag(true);
+                self.op_dec_reg(RegB);
                 self.cpu.pc += 1;
                 return 4;
             }
@@ -199,14 +209,7 @@ impl GameBoyEmulator {
             }
             0x0D => {
                 println!("DEC C");
-                let half_c = self.cpu.regs[RegC] & 0x0F;
-                let half_one = 1 & 0x0F;
-                self.set_h_flag(half_c < half_one);
-
-                self.reg_dec_c(1);
-
-                self.set_z_flag(self.cpu.regs[RegC] == 0);
-                self.set_n_flag(true);
+                self.op_dec_reg(RegC);
                 self.cpu.pc += 1;
                 return 4;
             }
@@ -275,10 +278,11 @@ impl GameBoyEmulator {
                 println!("LD (HL-),A");
                 let mut address = 0;
                 address |= ((self.get_hl() & 0x0F) as usize) << 8; // putting l left
-                address |= ((self.get_hl() & 0xF0) as usize) >> 8; // putting r right
-                // by the gods please be it
-                self.cpu.memory[address] = self.cpu.regs[RegA];
+                address |= ((self.get_hl() & 0xF0) as usize) >> 8; // putting h right
+                                                                   // by the gods please be it ? I'm not sure
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegA]; // SINCE WHEN WAS THIS LINE COMMENTED
                 self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_sub(1);
+
                 if self.cpu.regs[RegL] == 255 {
                     // number wraped around
                     self.cpu.regs[RegH] = self.cpu.regs[RegH].wrapping_sub(1);
@@ -487,15 +491,20 @@ impl GameBoyEmulator {
             }
             0xE0 => {
                 println!("LDH (a8),A");
-                self.cpu.memory[self.cpu.memory[self.cpu.pc + 1] as usize + 0xFF00] =
-                    self.cpu.regs[RegA];
+                self.set_hram(
+                    self.cpu.memory[self.cpu.pc + 1] as usize,
+                    self.cpu.regs[RegA],
+                );
                 self.cpu.pc += 2;
                 return 12;
             }
             0xF0 => {
                 println!("LDH A,(a8)");
-                self.cpu.regs[RegA] =
-                    self.cpu.memory[self.cpu.memory[self.cpu.pc + 1] as usize + 0xFF00];
+                self.cpu.regs[RegA] = self.get_hram(self.cpu.memory[self.cpu.pc + 1] as usize);
+                // I spent almost a whole day trying to find out why where the game in an infinite loop
+                // Till I had the great idea of using the concept of "searching online"
+                // Turns out the game keeps waiting for the game to draw, which is when 0xFF44 (the y lcd counter)
+                // Is 148 (or whatever it is in hex)  
                 self.cpu.pc += 2;
                 return 12;
             }
