@@ -107,6 +107,15 @@ impl GameBoyEmulator {
     }
 
     #[inline]
+    fn read(&self) -> u8 {
+        self.cpu.memory[self.cpu.pc]
+    }
+    #[inline]
+    fn read_next(&self, offset: usize) -> u8 {
+        self.cpu.memory[self.cpu.pc + offset]
+    }
+
+    #[inline]
     fn set_c_flag(&mut self, state: bool) {
         match state {
             true => {
@@ -194,10 +203,10 @@ impl GameBoyEmulator {
         let checked_functions: [u8; 15] = [
             0, 0xC3, 0xAF, 0x21, 0x0E, 0x06, 0x32, 0x05, 0x20, 0x0D, 0x3E, 0xF3, 0xE0, 0xF0, 0xFE,
         ];
-        if !checked_functions.contains(&self.cpu.memory[self.cpu.pc]) {
-            // panic!("{:02X}", self.cpu.memory[self.cpu.pc])
+        if !checked_functions.contains(&self.read()) {
+            // panic!("{:02X}", self.read())
         }
-        match self.cpu.memory[self.cpu.pc] {
+        match self.read() {
             // 5B (LD E,E)
             0 | 0x5B => {
                 println!("NOP");
@@ -213,7 +222,7 @@ impl GameBoyEmulator {
             }
             0x06 => {
                 println!("LD B,d8");
-                self.cpu.regs[RegB] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.regs[RegB] = self.read_next(1);
                 self.cpu.pc += 2;
                 return 8;
             }
@@ -231,15 +240,15 @@ impl GameBoyEmulator {
             }
             0x0E => {
                 println!("LD C,d8");
-                self.cpu.regs[RegC] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.regs[RegC] = self.read_next(1);
                 self.cpu.pc += 2;
                 return 8;
             }
             0x11 => {
                 println!("LD DE,d16");
-                self.cpu.regs[RegD] = self.cpu.memory[self.cpu.pc + 1];
-                self.cpu.regs[RegE] = self.cpu.memory[self.cpu.pc + 2];
-                self.cpu.pc += 3;
+                self.cpu.regs[RegD] = self.read_next(1);
+                self.cpu.regs[RegE] = self.read_next(2);
+                self.cpu.pc += 2;
                 return 12;
             }
             0x20 => {
@@ -253,17 +262,16 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 // pura gambiarra
                 // todo: maybe fix this later
-                self.cpu.pc = (self.cpu.pc as i128 + (self.cpu.memory[self.cpu.pc] as i8) as i128)
-                    as usize
-                    + 1;
+                self.cpu.pc = (self.cpu.pc as i128 + (self.read() as i8) as i128) as usize + 1;
                 return 12;
             }
             0x21 => {
                 println!("LD HL,d16");
                 // regs -> h l -- mem -> x y
                 //         y x
-                self.cpu.regs[RegL] = self.cpu.memory[self.cpu.pc + 1];
-                self.cpu.regs[RegH] = self.cpu.memory[self.cpu.pc + 2];
+                // todo: check if this is correct later
+                self.cpu.regs[RegL] = self.read_next(1);
+                self.cpu.regs[RegH] = self.read_next(2);
                 self.cpu.pc += 3;
                 return 12;
             }
@@ -292,8 +300,8 @@ impl GameBoyEmulator {
             0x31 => {
                 println!("LD SP,d16");
                 let mut value_d16 = 0;
-                value_d16 |= self.cpu.memory[self.cpu.pc + 1] as usize;
-                value_d16 |= (self.cpu.memory[self.cpu.pc + 2] as usize) << 8;
+                value_d16 |= self.read_next(1) as usize;
+                value_d16 |= (self.read_next(2) as usize) << 8;
                 self.cpu.sp = value_d16 as u16;
                 self.cpu.pc += 3;
                 return 12;
@@ -316,7 +324,7 @@ impl GameBoyEmulator {
             }
             0x36 => {
                 println!("LD (HL),d8");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.memory[self.get_hl() as usize] = self.read_next(1);
                 self.cpu.pc += 2;
                 return 12;
             }
@@ -328,7 +336,7 @@ impl GameBoyEmulator {
             }
             0x3E => {
                 println!("LD A,d8");
-                self.cpu.regs[RegA] = self.cpu.memory[self.cpu.pc + 1];
+                self.cpu.regs[RegA] = self.read_next(1);
                 self.cpu.pc += 2;
                 return 8;
             }
@@ -491,8 +499,8 @@ impl GameBoyEmulator {
                 // and this is where I learnt the difference between big and small endian
                 // now I just wonder where else have I not flipped the bytes where I should
                 let mut new_address = 0;
-                new_address |= self.cpu.memory[self.cpu.pc + 1] as usize;
-                new_address |= (self.cpu.memory[self.cpu.pc + 2] as usize) << 8;
+                new_address |= self.read_next(1) as usize;
+                new_address |= (self.read_next(2) as usize) << 8;
                 self.cpu.pc = new_address as usize;
                 return 16;
             }
@@ -505,24 +513,21 @@ impl GameBoyEmulator {
             0xEA => {
                 println!("LD (a16),A");
                 let mut address = 0;
-                address |= self.cpu.memory[self.cpu.pc + 1] as usize;
-                address |= (self.cpu.memory[self.cpu.pc + 2] as usize) << 8;
+                address |= self.read_next(1) as usize;
+                address |= (self.read_next(2) as usize) << 8;
                 self.cpu.memory[address as usize] = self.cpu.regs[RegA];
                 self.cpu.pc += 3;
                 return 16;
             }
             0xE0 => {
                 println!("LDH (a8),A");
-                self.set_hram(
-                    self.cpu.memory[self.cpu.pc + 1] as usize,
-                    self.cpu.regs[RegA],
-                );
+                self.set_hram(self.read_next(1) as usize, self.cpu.regs[RegA]);
                 self.cpu.pc += 2;
                 return 12;
             }
             0xF0 => {
                 println!("LDH A,(a8)");
-                self.cpu.regs[RegA] = self.get_hram(self.cpu.memory[self.cpu.pc + 1] as usize);
+                self.cpu.regs[RegA] = self.get_hram(self.read_next(1) as usize);
                 // I spent almost a whole day trying to find out why where the game in an infinite loop
                 // Till I had the great idea of using the concept of "searching online"
                 // Turns out the game keeps waiting for the game to draw, which is when 0xFF44 (the y lcd counter)
@@ -538,7 +543,7 @@ impl GameBoyEmulator {
             }
             0xFE => {
                 println!("CP d8");
-                let value = self.cpu.memory[self.cpu.pc + 1];
+                let value = self.read_next(1);
                 let half_a: u8 = self.cpu.regs[RegA] & 0x0F;
                 let half_v = value & 0x0F;
                 self.set_h_flag(half_a < half_v);
@@ -556,7 +561,7 @@ impl GameBoyEmulator {
                 self.print_regs();
                 todo!(
                     "{:02X}\nPC: {:04X} | {}",
-                    self.cpu.memory[self.cpu.pc],
+                    self.read(),
                     self.cpu.pc,
                     self.cpu.pc
                 )
