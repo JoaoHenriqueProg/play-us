@@ -213,6 +213,15 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x01 => {
+                println!("LD BC,d16");
+                // regs -> b c -- mem -> x y
+                //         y x
+                self.cpu.regs[RegC] = self.read_next(1);
+                self.cpu.regs[RegB] = self.read_next(2);
+                self.cpu.pc += 3;
+                return 12;
+            }
             0x05 => {
                 // check for half carry
                 println!("DEC B");
@@ -224,6 +233,15 @@ impl GameBoyEmulator {
                 println!("LD B,d8");
                 self.cpu.regs[RegB] = self.read_next(1);
                 self.cpu.pc += 2;
+                return 8;
+            }
+            0x0B => {
+                println!("DEC BC");
+                self.cpu.regs[RegC] = self.cpu.regs[RegC].wrapping_sub(1);
+                if self.cpu.regs[RegC] == 255 {
+                    self.cpu.regs[RegB] = self.cpu.regs[RegB].wrapping_sub(1)
+                }
+                self.cpu.pc += 1;
                 return 8;
             }
             0x0C => {
@@ -504,6 +522,20 @@ impl GameBoyEmulator {
                 new_address |= (self.read_next(2) as usize) << 8;
                 self.cpu.pc = new_address as usize;
                 return 16;
+            }
+            0xCD => {
+                println!("CALL a16");
+                let mut next_instruction = (self.cpu.pc & 0xFFFF) as u16 + 3;
+                self.cpu.memory[self.cpu.sp as usize] = (next_instruction >> 8) as u8; // offsetting to the next instruction
+                self.cpu.memory[self.cpu.sp as usize + 1] = (next_instruction & 0x00FF) as u8;
+
+                let mut new_address = 0;
+                new_address |= self.read_next(1) as usize;
+                new_address |= (self.read_next(2) as usize) << 8;
+                
+                self.cpu.sp -= 2; // apparently the stack is "upside down"
+                self.cpu.pc =  new_address;
+                return 24
             }
             0xE2 => {
                 println!("LD (C),A");
