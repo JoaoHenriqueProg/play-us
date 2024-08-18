@@ -525,9 +525,10 @@ impl GameBoyEmulator {
             }
             0xCD => {
                 println!("CALL a16");
-                let mut next_instruction = (self.cpu.pc & 0xFFFF) as u16 + 3;
-                self.cpu.memory[self.cpu.sp as usize] = (next_instruction >> 8) as u8; // offsetting to the next instruction
-                self.cpu.memory[self.cpu.sp as usize + 1] = (next_instruction & 0x00FF) as u8;
+                let mut next_instruction = (self.cpu.pc & 0xFFFF) as u16 + 3; // offsetting to the next instruction
+                // stores in little endian
+                self.cpu.memory[self.cpu.sp as usize] = (next_instruction & 0x00FF) as u8;
+                self.cpu.memory[self.cpu.sp as usize + 1] = (next_instruction >> 8) as u8;
 
                 let mut new_address = 0;
                 new_address |= self.read_next(1) as usize;
