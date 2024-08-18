@@ -467,6 +467,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
+            0x78 => {
+                println!("LD A,B");
+                self.cpu.regs[RegA] = self.cpu.regs[RegB];
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x90 => {
                 println!("SUB B");
                 self.sub_reg_from_a(RegB);
@@ -513,6 +519,16 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0xB1 => {
+                println!("OR C");
+                self.cpu.regs[RegA] = self.cpu.regs[RegA] | self.cpu.regs[RegC];
+                self.set_z_flag(self.cpu.regs[RegA] == 0);
+                self.set_c_flag(false);
+                self.set_h_flag(false);
+                self.set_n_flag(false);
+                self.cpu.pc += 1;
+                return 4;
+            }
             0xC3 => {
                 println!("JMP a16");
                 // and this is where I learnt the difference between big and small endian
@@ -521,6 +537,15 @@ impl GameBoyEmulator {
                 new_address |= self.read_next(1) as usize;
                 new_address |= (self.read_next(2) as usize) << 8;
                 self.cpu.pc = new_address as usize;
+                return 16;
+            }
+            0xC9 => {
+                println!("RET");
+                let mut new_address = 0;
+                self.cpu.sp += 2;
+                new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
+                new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
+                self.cpu.pc = new_address;
                 return 16;
             }
             0xCD => {
