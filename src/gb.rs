@@ -1,4 +1,90 @@
+use std::str::Bytes;
+
 use crate::emulator::Emulator;
+use eframe::egui::{self, Color32, RichText, Sense};
+
+struct RamViewer {
+    ram: [u8; 64 * 1024],
+    address_to_look: String,
+    starting_address: usize
+}
+
+impl Default for RamViewer {
+    fn default() -> Self {
+        Self {
+            ram: [0; 64 * 1024],
+            address_to_look: "".to_string(),
+            starting_address: 0
+        }
+    }
+}
+
+impl RamViewer {
+    fn new(ram: [u8; 64 * 1024]) -> Self {
+        Self { ram, address_to_look: "".to_string(), starting_address: 0 }
+    }
+}
+
+impl eframe::App for RamViewer {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.heading("RAM Viewer");
+            // ui.horizontal(|ui| {
+            //     let name_label = ui.label("Your name: ");
+            //     ui.text_edit_singleline(&mut self.name)
+            //         .labelled_by(name_label.id);
+            // });
+            // ui.add(egui::Slider::new(&mut self.age, 0..=120).text("age"));
+            
+            ui.vertical(|ui| {
+                ui.label("Address");
+                let mut i = self.starting_address;
+                
+                ui.text_edit_singleline(&mut self.address_to_look);
+                if ui.button("Look up").clicked() {
+                    // validate address
+                    for c in self.address_to_look.chars() {
+                        match usize::from_str_radix(&self.address_to_look, 16) {
+                            Ok(mut found) => {
+                                found -= found % 16;
+                                self.starting_address = found;
+                            },
+                            Err(_) => return,
+                        }
+                    }
+                }
+                ui.label(RichText::new("      0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F").size(14.0).monospace());
+                while i < 64 * 1024 {
+                    ui.label(RichText::new(format!(
+                        "{:04X}: {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X} {:02X}",
+                        i,
+                        self.ram[i],
+                        self.ram[i + 1],
+                        self.ram[i + 2],
+                        self.ram[i + 3],
+                        self.ram[i + 4],
+                        self.ram[i + 5],
+                        self.ram[i + 6],
+                        self.ram[i + 7],
+                        self.ram[i + 8],
+                        self.ram[i + 9],
+                        self.ram[i + 10],
+                        self.ram[i + 11],
+                        self.ram[i + 12],
+                        self.ram[i + 13],
+                        self.ram[i + 14],
+                        self.ram[i + 15],
+                    )).color(Color32::WHITE).monospace().size(14.0));
+                    i += 16;
+                }
+            });
+
+            // ui.image(egui::include_image!(
+            //     "../../../crates/egui/assets/ferris.png"
+            // ));
+        });
+    }
+}
 
 struct Cpu {
     bus_8: u8,
@@ -559,6 +645,22 @@ impl GameBoyEmulator {
             _ => {
                 println!();
                 self.print_regs();
+                let options = eframe::NativeOptions {
+                    viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 720.0]),
+                    ..Default::default()
+                };
+                let rv = RamViewer::new(self.cpu.memory);
+                eframe::run_native(
+                    "RAM viewer",
+                    options,
+                    Box::new(|cc| {
+                        // This gives us image support:
+                        // egui_extras::install_image_loaders(&cc.egui_ctx);
+
+                        Ok(Box::<RamViewer>::new(rv))
+                    }),
+                )
+                .unwrap();
                 todo!(
                     "{:02X}\nPC: {:04X} | {}",
                     self.read(),
