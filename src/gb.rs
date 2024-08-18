@@ -299,6 +299,15 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x01 => {
+                println!("LD BC,d16");
+                // regs -> b c -- mem -> x y
+                //         y x
+                self.cpu.regs[RegC] = self.read_next(1);
+                self.cpu.regs[RegB] = self.read_next(2);
+                self.cpu.pc += 3;
+                return 12;
+            }
             0x05 => {
                 // check for half carry
                 println!("DEC B");
@@ -310,6 +319,15 @@ impl GameBoyEmulator {
                 println!("LD B,d8");
                 self.cpu.regs[RegB] = self.read_next(1);
                 self.cpu.pc += 2;
+                return 8;
+            }
+            0x0B => {
+                println!("DEC BC");
+                self.cpu.regs[RegC] = self.cpu.regs[RegC].wrapping_sub(1);
+                if self.cpu.regs[RegC] == 255 {
+                    self.cpu.regs[RegB] = self.cpu.regs[RegB].wrapping_sub(1)
+                }
+                self.cpu.pc += 1;
                 return 8;
             }
             0x0C => {
@@ -366,7 +384,8 @@ impl GameBoyEmulator {
                 let mut address = 0;
                 address |= ((self.get_hl() & 0x0F) as usize) << 8; // putting l left
                 address |= ((self.get_hl() & 0xF0) as usize) >> 8; // putting h right
-                self.cpu.regs[RegA] = self.cpu.memory[address]; // SINCE WHEN WAS THIS LINE COMMENTED
+                self.cpu.regs[RegA] = self.cpu.memory[self.get_hl() as usize]; // SINCE WHEN WAS THIS LINE COMMENTED
+                // NOTE: ADDRESSING MEMORY WITH HL DOESN'T TREAT IT LIKE LITTLE ENDIAN
                 self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_add(1);
 
                 if self.cpu.regs[RegL] == 0 {
@@ -398,7 +417,7 @@ impl GameBoyEmulator {
                 address |= ((self.get_hl() & 0x0F) as usize) << 8; // putting l left
                 address |= ((self.get_hl() & 0xF0) as usize) >> 8; // putting h right
                                                                    // by the gods please be it ? I'm not sure
-                self.cpu.memory[address as usize] = self.cpu.regs[RegA]; // SINCE WHEN WAS THIS LINE COMMENTED
+                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegA]; // SINCE WHEN WAS THIS LINE COMMENTED
                 self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_sub(1);
 
                 if self.cpu.regs[RegL] == 255 {
@@ -534,6 +553,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
+            0x78 => {
+                println!("LD A,B");
+                self.cpu.regs[RegA] = self.cpu.regs[RegB];
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x90 => {
                 println!("SUB B");
                 self.sub_reg_from_a(RegB);
@@ -580,6 +605,16 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0xB1 => {
+                println!("OR C");
+                self.cpu.regs[RegA] = self.cpu.regs[RegA] | self.cpu.regs[RegC];
+                self.set_z_flag(self.cpu.regs[RegA] == 0);
+                self.set_c_flag(false);
+                self.set_h_flag(false);
+                self.set_n_flag(false);
+                self.cpu.pc += 1;
+                return 4;
+            }
             0xC3 => {
                 println!("JMP a16");
                 // and this is where I learnt the difference between big and small endian
@@ -589,6 +624,30 @@ impl GameBoyEmulator {
                 new_address |= (self.read_next(2) as usize) << 8;
                 self.cpu.pc = new_address as usize;
                 return 16;
+            }
+            0xC9 => {
+                println!("RET");
+                let mut new_address = 0;
+                self.cpu.sp += 2;
+                new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
+                new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
+                self.cpu.pc = new_address;
+                return 16;
+            }
+            0xCD => {
+                println!("CALL a16");
+                let mut next_instruction = (self.cpu.pc & 0xFFFF) as u16 + 3; // offsetting to the next instruction
+                // stores in little endian
+                self.cpu.memory[self.cpu.sp as usize] = (next_instruction & 0x00FF) as u8;
+                self.cpu.memory[self.cpu.sp as usize + 1] = (next_instruction >> 8) as u8;
+
+                let mut new_address = 0;
+                new_address |= self.read_next(1) as usize;
+                new_address |= (self.read_next(2) as usize) << 8;
+                
+                self.cpu.sp -= 2; // apparently the stack is "upside down"
+                self.cpu.pc =  new_address;
+                return 24
             }
             0xE2 => {
                 println!("LD (C),A");
