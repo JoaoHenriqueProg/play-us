@@ -141,12 +141,13 @@ impl GameBoyEmulator {
 
     fn set_hram(&mut self, address: usize, value: u8) {
         self.cpu.memory[address + 0xFF00] = value;
-        println!("Set {value} at {address} (or {}) of hram", address + 0xFF00);
+        println!("Set {:02X} at {:02X} (or {}) of hram", value, address, address + 0xFF00);
     }
     fn get_hram(&mut self, address: usize) -> u8 {
         println!(
-            "Got {} at {address} (or {}) of hram",
+            "Got {:02X} at {:02X} (or {}) of hram",
             self.cpu.memory[address + 0xFF00],
+            address,
             address + 0xFF00
         );
         return self.cpu.memory[address + 0xFF00];
@@ -683,6 +684,12 @@ impl GameBoyEmulator {
             0xF3 => {
                 println!("DI");
                 self.cpu.ime = false;
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0xFB => {
+                println!("EI");
+                self.cpu.ime = true;
                 self.cpu.pc += 1;
                 return 4;
             }
