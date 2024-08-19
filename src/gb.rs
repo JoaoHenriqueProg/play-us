@@ -556,6 +556,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x5F => {
+                println!("LD E,A");
+                self.cpu.regs[RegE] = self.cpu.regs[RegA];
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x6C => {
                 println!("LD L,H");
                 self.cpu.regs[RegL] = self.cpu.regs[RegH];
@@ -615,6 +621,17 @@ impl GameBoyEmulator {
                 self.cpu.regs[RegA] = self.cpu.regs[RegC];
                 self.cpu.pc += 1;
                 return 4;
+            }
+            0x87 => {
+                println!("ADD A,A");
+                self.set_h_flag((self.cpu.regs[RegA] & 0xF) + (self.cpu.regs[RegA] & 0xF) > 0xF);
+                let result = self.cpu.regs[RegA].wrapping_add(self.cpu.regs[RegA]);
+                self.set_c_flag(result < self.cpu.regs[RegA]);
+                self.cpu.regs[RegA] = result;
+                self.set_z_flag(self.cpu.regs[RegA] == 0);
+                self.set_n_flag(false);
+                self.cpu.pc += 1;
+                return 4
             }
             0x90 => {
                 println!("SUB B");
@@ -740,6 +757,14 @@ impl GameBoyEmulator {
                 self.cpu.sp -= 2; // apparently the stack is "upside down"
                 self.cpu.pc =  new_address;
                 return 24
+            }
+            0xE1 => {
+                println!("POP HL");
+                self.cpu.sp += 2;
+                self.cpu.regs[RegH] = self.cpu.memory[self.cpu.sp as usize + 1];
+                self.cpu.regs[RegL] = self.cpu.memory[self.cpu.sp as usize];
+                self.cpu.pc += 1;
+                return 12;
             }
             0xE2 => {
                 println!("LD (C),A");
