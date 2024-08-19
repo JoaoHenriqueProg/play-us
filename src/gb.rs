@@ -431,6 +431,15 @@ impl GameBoyEmulator {
                 self.cpu.pc += 3;
                 return 12;
             }
+            0x23 => {
+                println!("INC HL");
+                self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_add(1);
+                if self.cpu.regs[RegL] == 0 {
+                    self.cpu.regs[RegH] = self.cpu.regs[RegH].wrapping_add(1);
+                }
+                self.cpu.pc += 1;
+                return 8;
+            }
             0x2A => {
                 println!("LD A,(HL+)");
                 let mut address = 0;
@@ -786,6 +795,16 @@ impl GameBoyEmulator {
                 self.cpu.pc =  new_address;
                 return 24
             }
+            0xD5 => {
+                // might break things soon
+                // todo: keep here in mind
+                println!("PUSH DE");
+                self.cpu.memory[self.cpu.sp as usize] = self.cpu.regs[RegE];
+                self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[RegD];
+                self.cpu.sp -= 2;
+                self.cpu.pc += 1;
+                return 16
+            }
             0xE1 => {
                 println!("POP HL");
                 self.cpu.sp += 2;
@@ -808,6 +827,11 @@ impl GameBoyEmulator {
                 self.set_h_flag(true);
                 self.set_c_flag(false);
                 self.cpu.pc += 2;
+                return 8;
+            }
+            0xE9 => {
+                println!("JP (HL)");
+                self.cpu.pc = self.get_hl() as usize;
                 return 8;
             }
             0xEA => {
