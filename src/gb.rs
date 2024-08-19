@@ -142,6 +142,21 @@ impl GameBoyEmulator {
     fn set_hram(&mut self, address: usize, value: u8) {
         self.cpu.memory[address + 0xFF00] = value;
         println!("Set {:02X} at {:02X} (or {}) of hram", value, address, address + 0xFF00);
+        
+        // turns out this high area is used for a ton of flags that the hardware plays with
+        match address {
+            0x0000 => {
+                // todo: capture inputs
+                // for some goddamn reason, in gameboy, a not pressed button is 1
+                // and a pressed button is 0
+                if value == 0x20 { // bit 5 (select buttons) are the ones to be looked
+                    self.cpu.memory[address + 0xFF00] = 0xEF;
+                } else {
+                    panic!("either direction buttons pressed or god knows what");
+                }
+            }
+            _ => println!("set_hram should check for {:04X}", address)
+        }
     }
     fn get_hram(&mut self, address: usize) -> u8 {
         println!(
