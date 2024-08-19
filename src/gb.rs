@@ -151,8 +151,10 @@ impl GameBoyEmulator {
                 // and a pressed button is 0
                 if value == 0x20 { // bit 5 (select buttons) are the ones to be looked
                     self.cpu.memory[address + 0xFF00] = 0xEF;
-                } else if value == 0x10 { // bit a (direction buttons) are the ones to be looked
+                } else if value == 0x10 { // bit 4 (direction buttons) are the ones to be looked
                     self.cpu.memory[address + 0xFF00] = 0xDF;
+                } else if value == 0x30 { // bit 4 and 5, no input is being captured
+                    self.cpu.memory[address + 0xFF00] |= 0xF;
                 } else {
                     panic!("god knows what");
                 }
@@ -500,6 +502,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x4F => {
+                println!("LD C,A");
+                self.cpu.regs[RegC] = self.cpu.regs[RegA];
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x53 => {
                 println!("LD D,E");
                 self.cpu.regs[RegD] = self.cpu.regs[RegE];
@@ -602,6 +610,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x79 => {
+                println!("LD A,C");
+                self.cpu.regs[RegA] = self.cpu.regs[RegC];
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x90 => {
                 println!("SUB B");
                 self.sub_reg_from_a(RegB);
@@ -635,6 +649,26 @@ impl GameBoyEmulator {
             0x95 => {
                 println!("SUB L");
                 self.sub_reg_from_a(RegL);
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0xA1 => {
+                println!("AND B");
+                self.cpu.regs[RegA] &= self.cpu.regs[RegB];
+                self.set_z_flag(self.cpu.regs[RegA] == 0);
+                self.set_c_flag(false);
+                self.set_h_flag(true);
+                self.set_n_flag(false);
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0xA9 => {
+                println!("XOR C");
+                self.cpu.regs[RegA] ^= self.cpu.regs[RegC];
+                self.set_z_flag(self.cpu.regs[RegA] == 0);
+                self.set_c_flag(false);
+                self.set_h_flag(false);
+                self.set_n_flag(false);
                 self.cpu.pc += 1;
                 return 4;
             }
@@ -731,6 +765,16 @@ impl GameBoyEmulator {
                 self.cpu.memory[address as usize] = self.cpu.regs[RegA];
                 self.cpu.pc += 3;
                 return 16;
+            }
+            0xEF => {
+                println!("RST 28H");
+                let next_instruction = (self.cpu.pc & 0xFFFF) as u16 + 1; // offsetting to the next instruction
+                // stores in little endian
+                self.cpu.memory[self.cpu.sp as usize] = (next_instruction & 0x00FF) as u8;
+                self.cpu.memory[self.cpu.sp as usize + 1] = (next_instruction >> 8) as u8;
+                self.cpu.sp -= 2;
+                self.cpu.pc = 0x0028;
+                return 16
             }
             0xE0 => {
                 println!("LDH (a8),A");
