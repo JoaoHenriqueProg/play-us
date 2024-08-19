@@ -1,3 +1,4 @@
+use core::panic;
 use std::str::Bytes;
 
 use crate::emulator::Emulator;
@@ -378,12 +379,33 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4
             }
-            0x11 => {
-                println!("LD DE,d16");
+            // todo: to check
+            // 0x11 => {
+            //     println!("LD DE,d16");
+            //     self.cpu.regs[RegD] = self.read_next(1);
+            //     self.cpu.regs[RegE] = self.read_next(2);
+            //     self.cpu.pc += 2;
+            //     return 12;
+            // }
+            0x16 => {
+                println!("LD D,d8");
                 self.cpu.regs[RegD] = self.read_next(1);
-                self.cpu.regs[RegE] = self.read_next(2);
                 self.cpu.pc += 2;
-                return 12;
+                return 8;
+            }
+            0x19 => {
+                println!("ADD HL, DE");
+                let hl = (self.cpu.regs[RegH] as u16) << 8 | self.cpu.regs[RegL] as u16;
+                let de = (self.cpu.regs[RegD] as u16) << 8 | self.cpu.regs[RegE] as u16;
+                // aparently the half flag takes in bit 11 and 12 as half in 16 bit math
+                self.set_h_flag((hl & 0xFFF) + (de & 0xFFF) > 0xFFF);
+                let result = hl + de;
+                self.set_c_flag(result < hl && result < de);
+                self.set_n_flag(false);
+                self.cpu.pc += 1;
+                self.cpu.regs[RegH] = (result >> 8) as u8;
+                self.cpu.regs[RegL] = (result & 0x00FF) as u8;
+                return 8;
             }
             0x20 => {
                 println!("JR NZ,r8");
@@ -555,6 +577,12 @@ impl GameBoyEmulator {
                 self.cpu.regs[RegE] = self.cpu.regs[RegH];
                 self.cpu.pc += 1;
                 return 4;
+            }
+            0x5E => {
+                println!("LD E,(HL)");
+                self.cpu.regs[RegE] = self.cpu.memory[self.get_hl() as usize];
+                self.cpu.pc += 1;
+                return 8;
             }
             0x5F => {
                 println!("LD E,A");
