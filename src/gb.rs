@@ -364,6 +364,16 @@ impl GameBoyEmulator {
                 self.cpu.pc += 2;
                 return 8;
             }
+            0x0F => {
+                println!("RRCA");
+                self.set_c_flag(self.cpu.regs[RegA] & 1 == 1);
+                self.cpu.regs[RegA] = self.cpu.regs[RegA].rotate_right(1);
+                self.set_z_flag(false);
+                self.set_n_flag(false);
+                self.set_h_flag(false);
+                self.cpu.pc += 1;
+                return 4
+            }
             0x11 => {
                 println!("LD DE,d16");
                 self.cpu.regs[RegD] = self.read_next(1);
@@ -415,6 +425,15 @@ impl GameBoyEmulator {
                 println!("INC L");
                 // check for half carry first of all
                 self.op_inc_reg(RegL);
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x2F => {
+                println!("CPL");
+                // check for half carry first of all
+                self.cpu.regs[RegA] = !self.cpu.regs[RegA];
+                self.set_n_flag(true);
+                self.set_h_flag(true);
                 self.cpu.pc += 1;
                 return 4;
             }
@@ -669,6 +688,16 @@ impl GameBoyEmulator {
                 println!("LD (C),A");
                 self.cpu.memory[self.cpu.regs[RegC] as usize] = self.cpu.regs[RegA];
                 self.cpu.pc += 1;
+                return 8;
+            }
+            0xE6 => {
+                println!("AND d8");
+                self.cpu.regs[RegA] &= self.read_next(1);
+                self.set_z_flag(self.cpu.regs[RegA] == 0);
+                self.set_n_flag(false);
+                self.set_h_flag(true);
+                self.set_c_flag(false);
+                self.cpu.pc += 2;
                 return 8;
             }
             0xEA => {
