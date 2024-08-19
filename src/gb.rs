@@ -151,8 +151,10 @@ impl GameBoyEmulator {
                 // and a pressed button is 0
                 if value == 0x20 { // bit 5 (select buttons) are the ones to be looked
                     self.cpu.memory[address + 0xFF00] = 0xEF;
+                } else if value == 0x10 { // bit a (direction buttons) are the ones to be looked
+                    self.cpu.memory[address + 0xFF00] = 0xDF;
                 } else {
-                    panic!("either direction buttons pressed or god knows what");
+                    panic!("god knows what");
                 }
             }
             _ => println!("set_hram should check for {:04X}", address)
@@ -480,6 +482,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 2;
                 return 8;
             }
+            0x47 => {
+                println!("LD B,A");
+                self.cpu.regs[RegB] = self.cpu.regs[RegA];
+                self.cpu.pc += 1;
+                return 4;
+            }
             0x4A => {
                 println!("LD C,D");
                 self.cpu.regs[RegC] = self.cpu.regs[RegD];
@@ -640,6 +648,16 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0xB0 => {
+                println!("OR B");
+                self.cpu.regs[RegA] = self.cpu.regs[RegA] | self.cpu.regs[RegB];
+                self.set_z_flag(self.cpu.regs[RegA] == 0);
+                self.set_c_flag(false);
+                self.set_h_flag(false);
+                self.set_n_flag(false);
+                self.cpu.pc += 1;
+                return 4;
+            }
             0xB1 => {
                 println!("OR C");
                 self.cpu.regs[RegA] = self.cpu.regs[RegA] | self.cpu.regs[RegC];
@@ -668,6 +686,11 @@ impl GameBoyEmulator {
                 new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
                 self.cpu.pc = new_address;
                 return 16;
+            }
+            0xCB => {
+                print!("CB: ");
+                self.cpu.pc += 1;
+                return self.compute_cb();
             }
             0xCD => {
                 println!("CALL a16");
@@ -773,6 +796,43 @@ impl GameBoyEmulator {
                 .unwrap();
                 todo!(
                     "{:02X}\nPC: {:04X} | {}",
+                    self.read(),
+                    self.cpu.pc,
+                    self.cpu.pc
+                )
+            }
+        }
+    }
+    fn compute_cb(&mut self) -> u64{
+        // there's a second one :)
+        match self.read() {
+            0x30 | 0x31 | 0x32 | 0x33 | 0x34 | 0x35 | 0x36 | 0x37 => {
+                if self.read() >= 0x30 && self.read() <= 0x35 { // regs b to l
+                    println!("SWAP R"); // todo: name correct reg
+                    let cur_reg = self.cpu.regs[(self.read() & 0x0F) as usize + 1];
+                    let new_reg = 0 | (cur_reg << 4) | (cur_reg >> 4);
+                    self.cpu.regs[(self.read() & 0x0F) as usize + 1] = new_reg;
+                    self.set_z_flag(self.cpu.regs[(self.read() & 0x0F) as usize + 1] == 0);
+                    panic!("check if this is correct once used");
+                } else if self.read() == 0x36 {
+                    todo!("BC SWAP (HL)")
+                } else {
+                    println!("SWAP A");
+                    let cur_reg = self.cpu.regs[RegA];
+                    let new_reg = 0 | (cur_reg << 4) | (cur_reg >> 4);
+                    self.cpu.regs[RegA] = new_reg;
+                    self.set_z_flag(RegA == 0);
+                }
+                self.set_n_flag(false);
+                self.set_h_flag(false);
+                self.set_c_flag(false);
+                self.cpu.pc += 1;
+                return 8
+            }
+            _ => {
+                self.print_regs();
+                todo!(
+                    "CB: {:02X}\nPC: {:04X} | {}",
                     self.read(),
                     self.cpu.pc,
                     self.cpu.pc
