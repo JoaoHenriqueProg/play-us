@@ -394,6 +394,15 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
+            0x13 => {
+                println!("INC DE");
+                self.cpu.regs[RegE] = self.cpu.regs[RegE].wrapping_add(1);
+                if self.cpu.regs[RegE] == 0 {
+                    self.cpu.regs[RegD] = self.cpu.regs[RegD].wrapping_add(1);
+                }
+                self.cpu.pc += 1;
+                return 8;
+            }
             0x16 => {
                 println!("LD D,d8");
                 self.cpu.regs[RegD] = self.read_next(1);
@@ -412,6 +421,13 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 self.cpu.regs[RegH] = (result >> 8) as u8;
                 self.cpu.regs[RegL] = (result & 0x00FF) as u8;
+                return 8;
+            }
+            0x1A => {
+                println!("LD A,(DE)");
+                let de = (self.cpu.regs[RegD] as u16) << 8 | self.cpu.regs[RegE] as u16;
+                self.cpu.regs[RegA] = self.cpu.memory[de as usize];
+                self.cpu.pc += 1;
                 return 8;
             }
             0x20 => {
@@ -825,6 +841,16 @@ impl GameBoyEmulator {
                 self.cpu.memory[self.cpu.regs[RegC] as usize] = self.cpu.regs[RegA];
                 self.cpu.pc += 1;
                 return 8;
+            }
+            0xE5 => {
+                // might break things soon
+                // todo: keep here in mind
+                println!("PUSH HL");
+                self.cpu.memory[self.cpu.sp as usize] = self.cpu.regs[RegL];
+                self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[RegH];
+                self.cpu.sp -= 2;
+                self.cpu.pc += 1;
+                return 16
             }
             0xE6 => {
                 println!("AND d8");
