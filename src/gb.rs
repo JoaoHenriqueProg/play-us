@@ -173,6 +173,20 @@ impl GameBoyEmulator {
         return self.cpu.memory[address + 0xFF00];
     }
 
+    fn inc_pair(&mut self, left: Regs, right: Regs) {
+        self.cpu.regs[right] = self.cpu.regs[right].wrapping_add(1);
+        if self.cpu.regs[right] == 0 {
+            self.cpu.regs[left] = self.cpu.regs[left].wrapping_add(1);
+        }
+    }
+
+    fn dec_pair(&mut self, left: Regs, right: Regs) {
+        self.cpu.regs[right] = self.cpu.regs[right].wrapping_sub(1);
+        if self.cpu.regs[right] == 255 {
+            self.cpu.regs[left] = self.cpu.regs[left].wrapping_sub(1);
+        }
+    }
+
     #[inline]
     fn set_n_flag(&mut self, state: bool) {
         match state {
@@ -344,10 +358,7 @@ impl GameBoyEmulator {
             }
             0x0B => {
                 println!("DEC BC");
-                self.cpu.regs[RegC] = self.cpu.regs[RegC].wrapping_sub(1);
-                if self.cpu.regs[RegC] == 255 {
-                    self.cpu.regs[RegB] = self.cpu.regs[RegB].wrapping_sub(1)
-                }
+                self.dec_pair(RegB, RegC);
                 self.cpu.pc += 1;
                 return 8;
             }
@@ -396,10 +407,7 @@ impl GameBoyEmulator {
             }
             0x13 => {
                 println!("INC DE");
-                self.cpu.regs[RegE] = self.cpu.regs[RegE].wrapping_add(1);
-                if self.cpu.regs[RegE] == 0 {
-                    self.cpu.regs[RegD] = self.cpu.regs[RegD].wrapping_add(1);
-                }
+                self.inc_pair(RegD, RegE);
                 self.cpu.pc += 1;
                 return 8;
             }
@@ -457,21 +465,13 @@ impl GameBoyEmulator {
             0x22 => {
                 println!("LD (HL+),A");
                 self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegA];
-                self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_add(1);
-
-                if self.cpu.regs[RegL] == 0 {
-                    // number wraped around
-                    self.cpu.regs[RegH] = self.cpu.regs[RegH].wrapping_add(1);
-                }
+                self.inc_pair(RegH, RegL);
                 self.cpu.pc += 1;
                 return 8;
             }
             0x23 => {
                 println!("INC HL");
-                self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_add(1);
-                if self.cpu.regs[RegL] == 0 {
-                    self.cpu.regs[RegH] = self.cpu.regs[RegH].wrapping_add(1);
-                }
+                self.inc_pair(RegH, RegL);
                 self.cpu.pc += 1;
                 return 8;
             }
@@ -482,12 +482,7 @@ impl GameBoyEmulator {
                 address |= ((self.get_hl() & 0xF0) as usize) >> 8; // putting h right
                 self.cpu.regs[RegA] = self.cpu.memory[self.get_hl() as usize]; // SINCE WHEN WAS THIS LINE COMMENTED
                 // NOTE: ADDRESSING MEMORY WITH HL DOESN'T TREAT IT LIKE LITTLE ENDIAN
-                self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_add(1);
-
-                if self.cpu.regs[RegL] == 0 {
-                    // number wraped around
-                    self.cpu.regs[RegH] = self.cpu.regs[RegH].wrapping_add(1);
-                }
+                self.inc_pair(RegH, RegL);
                 self.cpu.pc += 1;
                 return 8;
             }
@@ -518,17 +513,8 @@ impl GameBoyEmulator {
             }
             0x32 => {
                 println!("LD (HL-),A");
-                let mut address = 0;
-                address |= ((self.get_hl() & 0x0F) as usize) << 8; // putting l left
-                address |= ((self.get_hl() & 0xF0) as usize) >> 8; // putting h right
-                                                                   // by the gods please be it ? I'm not sure
                 self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegA]; // SINCE WHEN WAS THIS LINE COMMENTED
-                self.cpu.regs[RegL] = self.cpu.regs[RegL].wrapping_sub(1);
-
-                if self.cpu.regs[RegL] == 255 {
-                    // number wraped around
-                    self.cpu.regs[RegH] = self.cpu.regs[RegH].wrapping_sub(1);
-                }
+                self.dec_pair(RegH, RegL);
                 self.cpu.pc += 1;
                 return 8;
             }
