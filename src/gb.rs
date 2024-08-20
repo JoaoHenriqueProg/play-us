@@ -380,13 +380,20 @@ impl GameBoyEmulator {
                 return 4
             }
             // todo: to check
-            // 0x11 => {
-            //     println!("LD DE,d16");
-            //     self.cpu.regs[RegD] = self.read_next(1);
-            //     self.cpu.regs[RegE] = self.read_next(2);
-            //     self.cpu.pc += 2;
-            //     return 12;
-            // }
+            0x11 => {
+                println!("LD DE,d16");
+                self.cpu.regs[RegE] = self.read_next(1);
+                self.cpu.regs[RegD] = self.read_next(2);
+                self.cpu.pc += 3;
+                return 12;
+            }
+            0x12 => {
+                println!("LD (DE),A");
+                let address = 0 | (self.cpu.regs[RegD] as usize) << 8 | (self.cpu.regs[RegE] as usize);
+                self.cpu.memory[address] = self.cpu.regs[RegA];
+                self.cpu.pc += 1;
+                return 8;
+            }
             0x16 => {
                 println!("LD D,d8");
                 self.cpu.regs[RegD] = self.read_next(1);
@@ -947,6 +954,13 @@ impl GameBoyEmulator {
                 self.set_n_flag(false);
                 self.set_h_flag(false);
                 self.set_c_flag(false);
+                self.cpu.pc += 1;
+                return 8
+            }
+            // RES instructions
+            0x87 => {
+                println!("RES 0,A");
+                self.cpu.regs[RegA] &= !1;
                 self.cpu.pc += 1;
                 return 8
             }
