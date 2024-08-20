@@ -475,6 +475,18 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
+            0x28 => {
+                println!("JR Z,r8");
+                // com branch: 12
+                // sem branch: 8
+                if !self.get_z_flag() {
+                    self.cpu.pc += 2;
+                    return 8;
+                }
+                self.cpu.pc += 1;
+                self.cpu.pc = (self.cpu.pc as i128 + (self.read() as i8) as i128) as usize + 1;
+                return 12;
+            }
             0x2A => {
                 println!("LD A,(HL+)");
                 let mut address = 0;
@@ -743,6 +755,17 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0xA7 => {
+                println!("AND A");
+                // todo: maybe this could be removed
+                self.cpu.regs[RegA] &= self.cpu.regs[RegA];
+                self.set_z_flag(self.cpu.regs[RegA] == 0);
+                self.set_c_flag(false);
+                self.set_h_flag(true);
+                self.set_n_flag(false);
+                self.cpu.pc += 1;
+                return 4;
+            }
             0xA9 => {
                 println!("XOR C");
                 self.cpu.regs[RegA] ^= self.cpu.regs[RegC];
@@ -935,6 +958,15 @@ impl GameBoyEmulator {
                 self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[RegA];
                 self.cpu.sp -= 2;
                 self.cpu.pc += 1;
+                return 16;
+            }
+            0xFA => {
+                println!("LD A,(a16)");
+                let mut address = 0;
+                address |= self.read_next(1) as usize;
+                address |= (self.read_next(2) as usize) << 8;
+                self.cpu.regs[RegA] = self.cpu.memory[address];
+                self.cpu.pc += 3;
                 return 16;
             }
             0xFB => {
