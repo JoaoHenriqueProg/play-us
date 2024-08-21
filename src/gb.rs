@@ -187,6 +187,12 @@ impl GameBoyEmulator {
         }
     }
 
+    fn pop_to_pair(&mut self, left: Regs, right: Regs) {
+        self.cpu.sp += 2;
+        self.cpu.regs[left] = self.cpu.memory[self.cpu.sp as usize + 1];
+        self.cpu.regs[right] = self.cpu.memory[self.cpu.sp as usize];
+    }
+    
     #[inline]
     fn set_n_flag(&mut self, state: bool) {
         match state {
@@ -841,9 +847,7 @@ impl GameBoyEmulator {
             }
             0xC1 => {
                 println!("POP BC");
-                self.cpu.sp += 2;
-                self.cpu.regs[RegB] = self.cpu.memory[self.cpu.sp as usize + 1];
-                self.cpu.regs[RegC] = self.cpu.memory[self.cpu.sp as usize];
+                self.pop_to_pair(RegB, RegC);
                 self.cpu.pc += 1;
                 return 12;
             }
@@ -924,9 +928,7 @@ impl GameBoyEmulator {
             }
             0xD1 => {
                 println!("POP DE");
-                self.cpu.sp += 2;
-                self.cpu.regs[RegD] = self.cpu.memory[self.cpu.sp as usize + 1];
-                self.cpu.regs[RegE] = self.cpu.memory[self.cpu.sp as usize];
+                self.pop_to_pair(RegD, RegE);
                 self.cpu.pc += 1;
                 return 12;
             }
@@ -942,9 +944,7 @@ impl GameBoyEmulator {
             }
             0xE1 => {
                 println!("POP HL");
-                self.cpu.sp += 2;
-                self.cpu.regs[RegH] = self.cpu.memory[self.cpu.sp as usize + 1];
-                self.cpu.regs[RegL] = self.cpu.memory[self.cpu.sp as usize];
+                self.pop_to_pair(RegH, RegL);
                 self.cpu.pc += 1;
                 return 12;
             }
@@ -1016,9 +1016,7 @@ impl GameBoyEmulator {
             }
             0xF1 => {
                 println!("POP AF");
-                self.cpu.sp += 2;
-                self.cpu.regs[RegA] = self.cpu.memory[self.cpu.sp as usize + 1];
-                self.cpu.regs[RegF] = self.cpu.memory[self.cpu.sp as usize];
+                self.pop_to_pair(RegA, RegF);
                 self.cpu.pc += 1;
                 return 12;
             }
