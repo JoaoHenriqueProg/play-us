@@ -417,6 +417,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 2;
                 return 8;
             }
+            0x18 => {
+                println!("JR a8");
+                self.cpu.pc += 1;
+                self.cpu.pc = (self.cpu.pc as i128 + (self.read() as i8) as i128) as usize + 1;
+                return 12;
+            }
             0x19 => {
                 println!("ADD HL, DE");
                 let hl = (self.cpu.regs[RegH] as u16) << 8 | self.cpu.regs[RegL] as u16;
@@ -819,6 +825,14 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0xC1 => {
+                println!("POP BC");
+                self.cpu.sp += 2;
+                self.cpu.regs[RegB] = self.cpu.memory[self.cpu.sp as usize + 1];
+                self.cpu.regs[RegC] = self.cpu.memory[self.cpu.sp as usize];
+                self.cpu.pc += 1;
+                return 12;
+            }
             0xC3 => {
                 println!("JMP a16");
                 // and this is where I learnt the difference between big and small endian
@@ -984,6 +998,14 @@ impl GameBoyEmulator {
                 // Turns out the game keeps waiting for the game to draw, which is when 0xFF44 (the y lcd counter)
                 // Is 148 (or whatever it is in hex)
                 self.cpu.pc += 2;
+                return 12;
+            }
+            0xF1 => {
+                println!("POP AF");
+                self.cpu.sp += 2;
+                self.cpu.regs[RegA] = self.cpu.memory[self.cpu.sp as usize + 1];
+                self.cpu.regs[RegF] = self.cpu.memory[self.cpu.sp as usize];
+                self.cpu.pc += 1;
                 return 12;
             }
             0xF3 => {
