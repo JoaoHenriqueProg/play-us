@@ -543,6 +543,20 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
+            0x35 => {
+                println!("DEC (HL)");
+                let cur_val = self.cpu.memory[self.get_hl() as usize];
+                let half_val = cur_val & 0x0F;
+                let half_one = 1;
+                self.set_h_flag(half_val < half_one);
+
+                self.cpu.memory[self.get_hl() as usize] = cur_val.wrapping_sub(1);
+
+                self.set_z_flag(self.cpu.memory[self.get_hl() as usize] == 0);
+                self.set_n_flag(true);
+                self.cpu.pc += 1;
+                return 12
+            }
             0x36 => {
                 println!("LD (HL),d8");
                 self.cpu.memory[self.get_hl() as usize] = self.read_next(1);
