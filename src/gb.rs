@@ -438,6 +438,13 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
+            0x1C => {
+                println!("INC E");
+                self.op_inc_reg(RegE);
+                self.cpu.pc += 1;
+                return 4;
+                
+            }
             0x20 => {
                 println!("JR NZ,r8");
                 // com branch: 12
@@ -698,6 +705,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
+            0x7E => {
+                println!("LD A,(HL)");
+                self.cpu.regs[RegA] = self.cpu.memory[self.get_hl() as usize];
+                self.cpu.pc += 1;
+                return 8;
+            }
             0x87 => {
                 println!("ADD A,A");
                 self.set_h_flag((self.cpu.regs[RegA] & 0xF) + (self.cpu.regs[RegA] & 0xF) > 0xF);
@@ -825,12 +838,39 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 16;
             }
+            0xC8 => {
+                println!("RET Z");
+                if !self.get_z_flag() {
+                    self.cpu.pc += 1;
+                    return 8
+                }
+                let mut new_address = 0;
+                self.cpu.sp += 2;
+                new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
+                new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
+                self.cpu.pc = new_address;
+                return 20;
+            }
             0xC9 => {
                 println!("RET");
                 let mut new_address = 0;
                 self.cpu.sp += 2;
                 new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
                 new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
+                self.cpu.pc = new_address;
+                return 16;
+            }
+            0xCA => {
+                println!("JP Z,a16");
+                // com branch: 16
+                // sem branch: 12
+                if !self.get_z_flag() {
+                    self.cpu.pc += 3;
+                    return 12;
+                }
+                let mut new_address = 0;
+                new_address |= self.read_next(1) as usize;
+                new_address |= (self.read_next(2) as usize) << 8;
                 self.cpu.pc = new_address;
                 return 16;
             }
