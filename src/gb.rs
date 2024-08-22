@@ -995,6 +995,17 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 16
             }
+            0xD9 => {
+                println!("RETI");
+                self.cpu.ime = true;
+                
+                let mut new_address = 0;
+                self.cpu.sp += 2;
+                new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
+                new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
+                self.cpu.pc = new_address;
+                return 16
+            }
             0xE1 => {
                 println!("POP HL");
                 self.pop_to_pair(RegH, RegL);
@@ -1192,8 +1203,10 @@ impl Emulator for GameBoyEmulator {
                 // https://gbdev.io/pandocs/Interrupts.html#ffff--ie-interrupt-enable
                 let interrupts = self.cpu.memory[0xff0f] & self.cpu.memory[0xffff];
                 
+                // no interrupts requested
+                if interrupts == 0 {}
                 // vblank interrupt
-                if interrupts & 1 == 1 {
+                else if interrupts & 1 == 1 {
                     let cur_instruction = self.cpu.pc;
                     self.cpu.memory[self.cpu.sp as usize] = (cur_instruction & 0x00FF) as u8;
                     self.cpu.memory[self.cpu.sp as usize + 1] = (cur_instruction >> 8) as u8;
