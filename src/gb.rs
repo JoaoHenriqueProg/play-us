@@ -299,6 +299,26 @@ impl GameBoyEmulator {
             "H={:02X} L={:02X}",
             self.cpu.regs[RegH], self.cpu.regs[RegL]
         );
+        println!("SP={:04X}", self.cpu.sp);
+    }
+
+    fn ram_viewer(&self) {
+        let options = eframe::NativeOptions {
+            viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 720.0]),
+            ..Default::default()
+        };
+        let rv = RamViewer::new(self.cpu.memory);
+        eframe::run_native(
+            "RAM viewer",
+            options,
+            Box::new(|cc| {
+                // This gives us image support:
+                // egui_extras::install_image_loaders(&cc.egui_ctx);
+
+                Ok(Box::<RamViewer>::new(rv))
+            }),
+        )
+        .unwrap();
     }
 
     fn op_dec_reg(&mut self, reg: Regs) {
@@ -1100,22 +1120,7 @@ impl GameBoyEmulator {
             _ => {
                 println!();
                 self.print_regs();
-                let options = eframe::NativeOptions {
-                    viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 720.0]),
-                    ..Default::default()
-                };
-                let rv = RamViewer::new(self.cpu.memory);
-                eframe::run_native(
-                    "RAM viewer",
-                    options,
-                    Box::new(|cc| {
-                        // This gives us image support:
-                        // egui_extras::install_image_loaders(&cc.egui_ctx);
-
-                        Ok(Box::<RamViewer>::new(rv))
-                    }),
-                )
-                .unwrap();
+                self.ram_viewer();
                 todo!(
                     "{:02X}\nPC: {:04X} | {}",
                     self.read(),
