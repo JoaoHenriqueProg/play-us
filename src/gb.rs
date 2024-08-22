@@ -549,6 +549,20 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
+            0x34 => {
+                println!("INC (HL)");
+                let cur_val = self.cpu.memory[self.get_hl() as usize];
+                let half_reg = cur_val & 0x0F;
+                let half_inc = 1;
+
+                self.cpu.memory[self.get_hl() as usize] = cur_val.wrapping_add(1);
+
+                self.set_n_flag(false);
+                self.set_z_flag(self.cpu.memory[self.get_hl() as usize] == 0);
+                self.set_h_flag(half_inc + half_reg > 0xF);
+                self.cpu.pc += 1;
+                return 12;
+            }
             0x35 => {
                 println!("DEC (HL)");
                 let cur_val = self.cpu.memory[self.get_hl() as usize];
@@ -572,6 +586,12 @@ impl GameBoyEmulator {
             0x3C => {
                 println!("INC A");
                 self.op_inc_reg(RegA);
+                self.cpu.pc += 1;
+                return 4;
+            }
+            0x3D => {
+                println!("DEC A");
+                self.op_dec_reg(RegA);
                 self.cpu.pc += 1;
                 return 4;
             }
@@ -850,6 +870,19 @@ impl GameBoyEmulator {
                 self.pop_to_pair(RegB, RegC);
                 self.cpu.pc += 1;
                 return 12;
+            }
+            0xC0 => {
+                println!("RET NZ");
+                if self.get_z_flag() {
+                    self.cpu.pc += 1;
+                    return 8;
+                }
+                let mut new_address = 0;
+                self.cpu.sp += 2;
+                new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
+                new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
+                self.cpu.pc = new_address;
+                return 20;
             }
             0xC3 => {
                 println!("JMP a16");
