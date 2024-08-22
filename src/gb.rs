@@ -1150,6 +1150,26 @@ impl Emulator for GameBoyEmulator {
         let mut cycles_count = 0;
         // let mut steps = 4;
         loop {
+            if self.cpu.ime {
+                // https://gbdev.io/pandocs/Interrupts.html#ffff--ie-interrupt-enable
+                let interrupts = self.cpu.memory[0xff0f] & self.cpu.memory[0xffff];
+                
+                // vblank interrupt
+                if interrupts & 1 == 1 {
+                    let cur_instruction = self.cpu.pc;
+                    self.cpu.memory[self.cpu.sp as usize] = (cur_instruction & 0x00FF) as u8;
+                    self.cpu.memory[self.cpu.sp as usize + 1] = (cur_instruction >> 8) as u8;
+                    self.cpu.sp -= 2;
+                    
+                    self.cpu.pc = 0x40;
+                    
+                    self.cpu.ime = false;
+                    
+                    self.cpu.memory[0xff0f] &= !0x0001;
+                } else {
+                    todo!(" unhandled interrupt {}", interrupts)
+                }
+            }
             // if steps == 0 {
             //     self.print_regs();
             //     break;
@@ -1161,12 +1181,17 @@ impl Emulator for GameBoyEmulator {
             // }
             // steps -= 1;
 
-            if (cycles_count > 456) {
+            if cycles_count > 456 {
                 // draw scan line
                 self.cpu.memory[0xff44] += 1;
-                if self.cpu.memory[0xff44] > 154 {
+                if self.cpu.memory[0xff44] == 144 {
+                    // request vblink interrupt
+                    self.cpu.memory[0xff0f] |= 1;
+                }
+                if self.cpu.memory[0xff44] == 154 {
                     self.cpu.memory[0xff44] = 0;
                 }
+                cycles_count -= 456;
             }
         }
     }
