@@ -950,7 +950,7 @@ impl GameBoyEmulator {
             }
             0xE2 => {
                 println!("LD (C),A");
-                self.cpu.memory[self.cpu.regs[RegC] as usize] = self.cpu.regs[RegA];
+                self.cpu.memory[self.cpu.regs[RegC] as usize + 0xFF00] = self.cpu.regs[RegA];
                 self.cpu.pc += 1;
                 return 8;
             }
