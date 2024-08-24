@@ -399,6 +399,12 @@ impl GameBoyEmulator {
         self.cpu.pc += 1;
         return 8;
     }
+    fn op_ld_reg_hl(&mut self, dst: Regs) -> u64 {
+        println!("LD {},(HL)", REGS_TO_CHAR[dst]);
+        self.cpu.regs[dst] = self.cpu.memory[self.get_hl() as usize];
+        self.cpu.pc += 1;
+        return 8;
+    }
 
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
     // the game boy architecture and stuff
@@ -647,31 +653,16 @@ impl GameBoyEmulator {
             0x4F => self.op_ld_reg_reg(RegC, RegA),
             0x53 => self.op_ld_reg_reg(RegD, RegE),
             0x55 => self.op_ld_reg_reg(RegD, RegL),
-            0x56 => {
-                println!("LD D,(HL)");
-                self.cpu.regs[RegD] = self.cpu.memory[self.get_hl() as usize];
-                self.cpu.pc += 1;
-                return 8;
-            }
+            0x56 => self.op_ld_reg_hl(RegD),
             0x57 => self.op_ld_reg_reg(RegD, RegA),
             0x58 => self.op_ld_reg_reg(RegE, RegB),
             0x59 => self.op_ld_reg_reg(RegE, RegC),
             0x5A => self.op_ld_reg_reg(RegE, RegD),
             0x5C => self.op_ld_reg_reg(RegE, RegH),
-            0x5E => {
-                println!("LD E,(HL)");
-                self.cpu.regs[RegE] = self.cpu.memory[self.get_hl() as usize];
-                self.cpu.pc += 1;
-                return 8;
-            }
+            0x5E => self.op_ld_reg_hl(RegE),
             0x5F => self.op_ld_reg_reg(RegE, RegA),
             0x6C => self.op_ld_reg_reg(RegL, RegH),
-            0x6E => {
-                println!("LD L,(HL)");
-                self.cpu.regs[RegL] = self.cpu.memory[self.get_hl() as usize];
-                self.cpu.pc += 1;
-                return 8;
-            }
+            0x6E => self.op_ld_reg_hl(RegL),
             0x6F => self.op_ld_reg_reg(RegL, RegA),
             0x71 => self.op_ld_hl_reg(RegC),
             0x72 => self.op_ld_hl_reg(RegD),
@@ -681,12 +672,7 @@ impl GameBoyEmulator {
             0x78 => self.op_ld_reg_reg(RegA, RegB),
             0x79 => self.op_ld_reg_reg(RegA, RegC),
             0x7C => self.op_ld_reg_reg(RegA, RegH),
-            0x7E => {
-                println!("LD A,(HL)");
-                self.cpu.regs[RegA] = self.cpu.memory[self.get_hl() as usize];
-                self.cpu.pc += 1;
-                return 8;
-            }
+            0x7E => self.op_ld_reg_hl(RegA),
             0x87 => {
                 println!("ADD A,A");
                 self.set_h_flag((self.cpu.regs[RegA] & 0xF) + (self.cpu.regs[RegA] & 0xF) > 0xF);
