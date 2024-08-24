@@ -279,20 +279,6 @@ impl GameBoyEmulator {
         ((self.cpu.regs[RegH] as u16) << 8) | self.cpu.regs[RegL] as u16
     }
 
-    #[inline]
-    fn sub_reg_from_a(&mut self, reg: Regs) {
-        let half_a: u8 = self.cpu.regs[RegA] & 0x0F;
-        let half_r = self.cpu.regs[reg.clone()] & 0x0F;
-        self.set_h_flag(half_a < half_r);
-
-        self.set_c_flag(self.cpu.regs[reg] > self.cpu.regs[RegA]);
-
-        self.cpu.regs[RegA] = self.cpu.regs[RegA].wrapping_sub(self.cpu.regs[reg]);
-
-        self.set_z_flag(self.cpu.regs[RegA] == 0);
-        self.set_n_flag(true);
-    }
-
     fn print_regs(&self) {
         println!(
             "A={:02X} F={:02X}",
@@ -387,6 +373,23 @@ impl GameBoyEmulator {
     fn op_ld_reg_reg(&mut self, dst: Regs, src: Regs) -> u64 {
         println!("LD {},{}", REGS_TO_CHAR[dst],REGS_TO_CHAR[src]);
         self.cpu.regs[dst] = self.cpu.regs[src];
+        self.cpu.pc += 1;
+        return 4;
+    }
+    fn op_sub_reg(&mut self, reg: Regs) -> u64 {
+        println!("SUB {}", REGS_TO_CHAR[reg]);
+
+        let half_a: u8 = self.cpu.regs[RegA] & 0x0F;
+        let half_r = self.cpu.regs[reg.clone()] & 0x0F;
+        self.set_h_flag(half_a < half_r);
+
+        self.set_c_flag(self.cpu.regs[reg] > self.cpu.regs[RegA]);
+
+        self.cpu.regs[RegA] = self.cpu.regs[RegA].wrapping_sub(self.cpu.regs[reg]);
+
+        self.set_z_flag(self.cpu.regs[RegA] == 0);
+        self.set_n_flag(true);
+
         self.cpu.pc += 1;
         return 4;
     }
@@ -714,42 +717,12 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4
             }
-            0x90 => {
-                println!("SUB B");
-                self.sub_reg_from_a(RegB);
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x91 => {
-                println!("SUB C");
-                self.sub_reg_from_a(RegC);
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x92 => {
-                println!("SUB D");
-                self.sub_reg_from_a(RegD);
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x93 => {
-                println!("SUB E");
-                self.sub_reg_from_a(RegE);
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x94 => {
-                println!("SUB H");
-                self.sub_reg_from_a(RegH);
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x95 => {
-                println!("SUB L");
-                self.sub_reg_from_a(RegL);
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x90 => self.op_sub_reg(RegB),
+            0x91 => self.op_sub_reg(RegC),
+            0x92 => self.op_sub_reg(RegD),
+            0x93 => self.op_sub_reg(RegE),
+            0x94 => self.op_sub_reg(RegH),
+            0x95 => self.op_sub_reg(RegL),
             0xA1 => {
                 println!("AND B");
                 self.cpu.regs[RegA] &= self.cpu.regs[RegB];
