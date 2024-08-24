@@ -347,7 +347,9 @@ impl GameBoyEmulator {
         self.cpu.pc += 1;
         return 4;
     }
-    fn op_inc_reg(&mut self, reg: Regs) {
+    fn op_inc_reg(&mut self, reg: Regs) -> u64 {
+        println!("INC {}", REGS_TO_CHAR[reg]);
+
         let half_reg = self.cpu.regs[reg] & 0x0F;
         let half_inc = 1;
 
@@ -356,6 +358,9 @@ impl GameBoyEmulator {
         self.set_n_flag(false);
         self.set_z_flag(self.cpu.regs[reg] == 0);
         self.set_h_flag(half_inc + half_reg > 0xF);
+
+        self.cpu.pc += 1;
+        return 4;
     }
 
     // full op functions
@@ -426,12 +431,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
-            0x0C => {
-                println!("INC C");
-                self.op_inc_reg(RegC);
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x0C => self.op_inc_reg(RegC),
             0x0D => self.op_dec_reg(RegC),
             0x0E => {
                 println!("LD C,d8");
@@ -503,13 +503,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
-            0x1C => {
-                println!("INC E");
-                self.op_inc_reg(RegE);
-                self.cpu.pc += 1;
-                return 4;
-                
-            }
+            0x1C => self.op_inc_reg(RegE),
             0x20 => {
                 println!("JR NZ,r8");
                 // com branch: 12
@@ -570,13 +564,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
-            0x2C => {
-                println!("INC L");
-                // check for half carry first of all
-                self.op_inc_reg(RegL);
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x2C => self.op_inc_reg(RegL),
             0x2F => {
                 println!("CPL");
                 // check for half carry first of all
@@ -636,12 +624,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 2;
                 return 12;
             }
-            0x3C => {
-                println!("INC A");
-                self.op_inc_reg(RegA);
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x3C => self.op_inc_reg(RegA),
             0x3D => self.op_dec_reg(RegA),
             0x3E => {
                 println!("LD A,d8");
