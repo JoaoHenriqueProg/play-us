@@ -312,6 +312,14 @@ impl GameBoyEmulator {
         .unwrap();
     }
 
+    fn ret(&mut self) {
+        let mut new_address = 0;
+        self.cpu.sp += 2;
+        new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
+        new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
+        self.cpu.pc = new_address;
+    }
+
     fn op_dec_reg(&mut self, reg: Regs) -> u64 {
         println!("DEC {}", REGS_TO_CHAR[reg]);
 
@@ -720,11 +728,7 @@ impl GameBoyEmulator {
                     self.cpu.pc += 1;
                     return 8;
                 }
-                let mut new_address = 0;
-                self.cpu.sp += 2;
-                new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
-                new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
-                self.cpu.pc = new_address;
+                self.ret();
                 return 20;
             }
             0xC3 => {
@@ -744,20 +748,12 @@ impl GameBoyEmulator {
                     self.cpu.pc += 1;
                     return 8
                 }
-                let mut new_address = 0;
-                self.cpu.sp += 2;
-                new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
-                new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
-                self.cpu.pc = new_address;
+                self.ret();
                 return 20;
             }
             0xC9 => {
                 println!("RET");
-                let mut new_address = 0;
-                self.cpu.sp += 2;
-                new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
-                new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
-                self.cpu.pc = new_address;
+                self.ret();
                 return 16;
             }
             0xCA => {
@@ -799,12 +795,7 @@ impl GameBoyEmulator {
             0xD9 => {
                 println!("RETI");
                 self.cpu.ime = true;
-                
-                let mut new_address = 0;
-                self.cpu.sp += 2;
-                new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
-                new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
-                self.cpu.pc = new_address;
+                self.ret();
                 return 16
             }
             0xE1 => self.op_pop_pair(RegH, RegL),
