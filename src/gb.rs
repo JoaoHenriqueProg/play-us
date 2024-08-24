@@ -376,7 +376,7 @@ impl GameBoyEmulator {
     }
     fn op_ld_reg_reg(&mut self, dst: Regs, src: Regs) -> u64 {
         println!("LD {},{}", REGS_TO_CHAR[dst],REGS_TO_CHAR[src]);
-        self.cpu.regs[RegD] = self.cpu.regs[RegL];
+        self.cpu.regs[dst] = self.cpu.regs[src];
         self.cpu.pc += 1;
         return 4;
     }
