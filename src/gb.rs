@@ -417,6 +417,12 @@ impl GameBoyEmulator {
         self.cpu.pc += 1;
         return 16;
     }
+    fn op_ld_reg_d8(&mut self, dst: Regs) -> u64 {
+        println!("LD {},d8", REGS_TO_CHAR[dst]);
+        self.cpu.regs[dst] = self.read_next(1);
+        self.cpu.pc += 2;
+        return 8;
+    }
 
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
     // the game boy architecture and stuff
@@ -446,12 +452,7 @@ impl GameBoyEmulator {
                 return 12;
             }
             0x05 => self.op_dec_reg(RegB),
-            0x06 => {
-                println!("LD B,d8");
-                self.cpu.regs[RegB] = self.read_next(1);
-                self.cpu.pc += 2;
-                return 8;
-            }
+            0x06 => self.op_ld_reg_d8(RegB),
             0x0B => {
                 println!("DEC BC");
                 self.dec_pair(RegB, RegC);
@@ -460,12 +461,7 @@ impl GameBoyEmulator {
             }
             0x0C => self.op_inc_reg(RegC),
             0x0D => self.op_dec_reg(RegC),
-            0x0E => {
-                println!("LD C,d8");
-                self.cpu.regs[RegC] = self.read_next(1);
-                self.cpu.pc += 2;
-                return 8;
-            }
+            0x0E => self.op_ld_reg_d8(RegC),
             0x0F => {
                 println!("RRCA");
                 self.set_c_flag(self.cpu.regs[RegA] & 1 == 1);
@@ -497,12 +493,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
-            0x16 => {
-                println!("LD D,d8");
-                self.cpu.regs[RegD] = self.read_next(1);
-                self.cpu.pc += 2;
-                return 8;
-            }
+            0x16 => self.op_ld_reg_d8(RegD),
             0x18 => {
                 println!("JR a8");
                 self.cpu.pc += 1;
@@ -653,12 +644,7 @@ impl GameBoyEmulator {
             }
             0x3C => self.op_inc_reg(RegA),
             0x3D => self.op_dec_reg(RegA),
-            0x3E => {
-                println!("LD A,d8");
-                self.cpu.regs[RegA] = self.read_next(1);
-                self.cpu.pc += 2;
-                return 8;
-            }
+            0x3E => self.op_ld_reg_d8(RegA),
             0x47 => self.op_ld_reg_reg(RegB, RegA),
             0x4A => self.op_ld_reg_reg(RegC, RegD),
             0x4B => self.op_ld_reg_reg(RegC, RegE),
