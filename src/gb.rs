@@ -393,6 +393,12 @@ impl GameBoyEmulator {
         self.cpu.pc += 1;
         return 4;
     }
+    fn op_ld_hl_reg(&mut self, src: Regs) -> u64 {
+        println!("LD (HL),{}", REGS_TO_CHAR[src]);
+        self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[src];
+        self.cpu.pc += 1;
+        return 8;
+    }
 
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
     // the game boy architecture and stuff
@@ -667,36 +673,11 @@ impl GameBoyEmulator {
                 return 8;
             }
             0x6F => self.op_ld_reg_reg(RegL, RegA),
-            0x71 => {
-                println!("LD (HL),C");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegC];
-                self.cpu.pc += 1;
-                return 8;
-            }
-            0x72 => {
-                println!("LD (HL),D");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegD];
-                self.cpu.pc += 1;
-                return 8;
-            }
-            0x73 => {
-                println!("LD (HL),E");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegE];
-                self.cpu.pc += 1;
-                return 8;
-            }
-            0x74 => {
-                println!("LD (HL),H");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegH];
-                self.cpu.pc += 1;
-                return 8;
-            }
-            0x75 => {
-                println!("LD (HL),L");
-                self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegL];
-                self.cpu.pc += 1;
-                return 8;
-            }
+            0x71 => self.op_ld_hl_reg(RegC),
+            0x72 => self.op_ld_hl_reg(RegD),
+            0x73 => self.op_ld_hl_reg(RegE),
+            0x74 => self.op_ld_hl_reg(RegH),
+            0x75 => self.op_ld_hl_reg(RegL),
             0x78 => self.op_ld_reg_reg(RegA, RegB),
             0x79 => self.op_ld_reg_reg(RegA, RegC),
             0x7C => self.op_ld_reg_reg(RegA, RegH),
