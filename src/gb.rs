@@ -332,7 +332,9 @@ impl GameBoyEmulator {
         .unwrap();
     }
 
-    fn op_dec_reg(&mut self, reg: Regs) {
+    fn op_dec_reg(&mut self, reg: Regs) -> u64 {
+        println!("DEC {}", REGS_TO_CHAR[reg]);
+
         let half_reg = self.cpu.regs[reg] & 0x0F;
         let half_one = 1;
         self.set_h_flag(half_reg < half_one);
@@ -341,6 +343,9 @@ impl GameBoyEmulator {
 
         self.set_z_flag(self.cpu.regs[reg] == 0);
         self.set_n_flag(true);
+        
+        self.cpu.pc += 1;
+        return 4;
     }
     fn op_inc_reg(&mut self, reg: Regs) {
         let half_reg = self.cpu.regs[reg] & 0x0F;
@@ -408,13 +413,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 3;
                 return 12;
             }
-            0x05 => {
-                // check for half carry
-                println!("DEC B");
-                self.op_dec_reg(RegB);
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x05 => self.op_dec_reg(RegB),
             0x06 => {
                 println!("LD B,d8");
                 self.cpu.regs[RegB] = self.read_next(1);
@@ -433,12 +432,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
-            0x0D => {
-                println!("DEC C");
-                self.op_dec_reg(RegC);
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x0D => self.op_dec_reg(RegC),
             0x0E => {
                 println!("LD C,d8");
                 self.cpu.regs[RegC] = self.read_next(1);
@@ -648,12 +642,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
-            0x3D => {
-                println!("DEC A");
-                self.op_dec_reg(RegA);
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x3D => self.op_dec_reg(RegA),
             0x3E => {
                 println!("LD A,d8");
                 self.cpu.regs[RegA] = self.read_next(1);
