@@ -409,6 +409,14 @@ impl GameBoyEmulator {
         self.cpu.pc += 1;
         return 12;
     }
+    fn op_push_pair(&mut self, left: Regs, right: Regs) -> u64 {
+        println!("PUSH {}{}", REGS_TO_CHAR[left], REGS_TO_CHAR[right]);
+        self.cpu.memory[self.cpu.sp as usize] = self.cpu.regs[right];
+        self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[left];
+        self.cpu.sp -= 2;
+        self.cpu.pc += 1;
+        return 16;
+    }
 
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
     // the game boy architecture and stuff
@@ -743,14 +751,7 @@ impl GameBoyEmulator {
                 self.cpu.pc = new_address as usize;
                 return 16;
             }
-            0xC5 => {
-                println!("PUSH BC");
-                self.cpu.memory[self.cpu.sp as usize] = self.cpu.regs[RegC];
-                self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[RegB];
-                self.cpu.sp -= 2;
-                self.cpu.pc += 1;
-                return 16;
-            }
+            0xC5 => self.op_push_pair(RegB, RegC),
             0xC8 => {
                 println!("RET Z");
                 if !self.get_z_flag() {
@@ -808,16 +809,7 @@ impl GameBoyEmulator {
                 return 24
             }
             0xD1 => self.op_pop_pair(RegD, RegE),
-            0xD5 => {
-                // might break things soon
-                // todo: keep here in mind
-                println!("PUSH DE");
-                self.cpu.memory[self.cpu.sp as usize] = self.cpu.regs[RegE];
-                self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[RegD];
-                self.cpu.sp -= 2;
-                self.cpu.pc += 1;
-                return 16
-            }
+            0xD5 => self.op_push_pair(RegD, RegE),
             0xD9 => {
                 println!("RETI");
                 self.cpu.ime = true;
@@ -836,16 +828,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
-            0xE5 => {
-                // might break things soon
-                // todo: keep here in mind
-                println!("PUSH HL");
-                self.cpu.memory[self.cpu.sp as usize] = self.cpu.regs[RegL];
-                self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[RegH];
-                self.cpu.sp -= 2;
-                self.cpu.pc += 1;
-                return 16
-            }
+            0xE5 => self.op_push_pair(RegH, RegL),
             0xE6 => {
                 println!("AND d8");
                 self.cpu.regs[RegA] &= self.read_next(1);
@@ -903,14 +886,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
-            0xF5 => {
-                println!("PUSH AF");
-                self.cpu.memory[self.cpu.sp as usize] = self.cpu.regs[RegF];
-                self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[RegA];
-                self.cpu.sp -= 2;
-                self.cpu.pc += 1;
-                return 16;
-            }
+            0xF5 => self.op_push_pair(RegA, RegF),
             0xFA => {
                 println!("LD A,(a16)");
                 let mut address = 0;
