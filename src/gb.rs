@@ -198,12 +198,6 @@ impl GameBoyEmulator {
         }
     }
 
-    fn pop_to_pair(&mut self, left: Regs, right: Regs) {
-        self.cpu.sp += 2;
-        self.cpu.regs[left] = self.cpu.memory[self.cpu.sp as usize + 1];
-        self.cpu.regs[right] = self.cpu.memory[self.cpu.sp as usize];
-    }
-    
     #[inline]
     fn set_n_flag(&mut self, state: bool) {
         match state {
@@ -404,6 +398,16 @@ impl GameBoyEmulator {
         self.cpu.regs[dst] = self.cpu.memory[self.get_hl() as usize];
         self.cpu.pc += 1;
         return 8;
+    }
+    fn op_pop_pair(&mut self, left: Regs, right: Regs) -> u64 {
+        println!("POP {}{}", REGS_TO_CHAR[left], REGS_TO_CHAR[right]);
+
+        self.cpu.sp += 2;
+        self.cpu.regs[left] = self.cpu.memory[self.cpu.sp as usize + 1];
+        self.cpu.regs[right] = self.cpu.memory[self.cpu.sp as usize];
+        
+        self.cpu.pc += 1;
+        return 12;
     }
 
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
@@ -715,12 +719,7 @@ impl GameBoyEmulator {
             0xAF => self.op_xor_reg(RegA),
             0xB0 => self.op_or_reg(RegB),
             0xB1 => self.op_or_reg(RegC),
-            0xC1 => {
-                println!("POP BC");
-                self.pop_to_pair(RegB, RegC);
-                self.cpu.pc += 1;
-                return 12;
-            }
+            0xC1 => self.op_pop_pair(RegB, RegC),
             0xC0 => {
                 println!("RET NZ");
                 if self.get_z_flag() {
@@ -808,12 +807,7 @@ impl GameBoyEmulator {
                 self.cpu.pc =  new_address;
                 return 24
             }
-            0xD1 => {
-                println!("POP DE");
-                self.pop_to_pair(RegD, RegE);
-                self.cpu.pc += 1;
-                return 12;
-            }
+            0xD1 => self.op_pop_pair(RegD, RegE),
             0xD5 => {
                 // might break things soon
                 // todo: keep here in mind
@@ -835,12 +829,7 @@ impl GameBoyEmulator {
                 self.cpu.pc = new_address;
                 return 16
             }
-            0xE1 => {
-                println!("POP HL");
-                self.pop_to_pair(RegH, RegL);
-                self.cpu.pc += 1;
-                return 12;
-            }
+            0xE1 => self.op_pop_pair(RegH, RegL),
             0xE2 => {
                 println!("LD (C),A");
                 self.cpu.memory[self.cpu.regs[RegC] as usize + 0xFF00] = self.cpu.regs[RegA];
@@ -907,12 +896,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 2;
                 return 12;
             }
-            0xF1 => {
-                println!("POP AF");
-                self.pop_to_pair(RegA, RegF);
-                self.cpu.pc += 1;
-                return 12;
-            }
+            0xF1 => self.op_pop_pair(RegA, RegF),
             0xF3 => {
                 println!("DI");
                 self.cpu.ime = false;
