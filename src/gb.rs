@@ -353,6 +353,7 @@ impl GameBoyEmulator {
         self.set_h_flag(half_inc + half_reg > 0xF);
     }
 
+    // full op functions
     fn op_xor_reg(&mut self, reg: Regs) -> u64 {
         println!("XOR {}", REGS_TO_CHAR[reg]);
         self.cpu.regs[RegA] ^= self.cpu.regs[reg];
@@ -360,6 +361,22 @@ impl GameBoyEmulator {
         self.set_c_flag(false);
         self.set_h_flag(false);
         self.set_n_flag(false);
+        self.cpu.pc += 1;
+        return 4;
+    }
+    fn op_or_reg(&mut self, reg: Regs) -> u64 {
+        println!("OR {}", REGS_TO_CHAR[reg]);
+        self.cpu.regs[RegA] = self.cpu.regs[RegA] | self.cpu.regs[reg];
+        self.set_z_flag(self.cpu.regs[RegA] == 0);
+        self.set_c_flag(false);
+        self.set_h_flag(false);
+        self.set_n_flag(false);
+        self.cpu.pc += 1;
+        return 4;
+    }
+    fn op_ld_reg_reg(&mut self, dst: Regs, src: Regs) -> u64 {
+        println!("LD {},{}", REGS_TO_CHAR[dst],REGS_TO_CHAR[src]);
+        self.cpu.regs[RegD] = self.cpu.regs[RegL];
         self.cpu.pc += 1;
         return 4;
     }
@@ -643,108 +660,38 @@ impl GameBoyEmulator {
                 self.cpu.pc += 2;
                 return 8;
             }
-            0x47 => {
-                println!("LD B,A");
-                self.cpu.regs[RegB] = self.cpu.regs[RegA];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x4A => {
-                println!("LD C,D");
-                self.cpu.regs[RegC] = self.cpu.regs[RegD];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x4B => {
-                println!("LD C,E");
-                self.cpu.regs[RegC] = self.cpu.regs[RegE];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x4F => {
-                println!("LD C,A");
-                self.cpu.regs[RegC] = self.cpu.regs[RegA];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x53 => {
-                println!("LD D,E");
-                self.cpu.regs[RegD] = self.cpu.regs[RegE];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x55 => {
-                println!("LD D,L");
-                self.cpu.regs[RegD] = self.cpu.regs[RegL];
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x47 => self.op_ld_reg_reg(RegB, RegA),
+            0x4A => self.op_ld_reg_reg(RegC, RegD),
+            0x4B => self.op_ld_reg_reg(RegC, RegE),
+            0x4F => self.op_ld_reg_reg(RegC, RegA),
+            0x53 => self.op_ld_reg_reg(RegD, RegE),
+            0x55 => self.op_ld_reg_reg(RegD, RegL),
             0x56 => {
                 println!("LD D,(HL)");
                 self.cpu.regs[RegD] = self.cpu.memory[self.get_hl() as usize];
                 self.cpu.pc += 1;
                 return 8;
             }
-            0x57 => {
-                println!("LD D,A");
-                self.cpu.regs[RegD] = self.cpu.regs[RegA];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x58 => {
-                println!("LD E,B");
-                self.cpu.regs[RegE] = self.cpu.regs[RegB];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x59 => {
-                println!("LD E,C");
-                self.cpu.regs[RegE] = self.cpu.regs[RegC];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x5A => {
-                println!("LD E,D");
-                self.cpu.regs[RegE] = self.cpu.regs[RegD];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x5C => {
-                println!("LD E,H");
-                self.cpu.regs[RegE] = self.cpu.regs[RegH];
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x57 => self.op_ld_reg_reg(RegD, RegA),
+            0x58 => self.op_ld_reg_reg(RegE, RegB),
+            0x59 => self.op_ld_reg_reg(RegE, RegC),
+            0x5A => self.op_ld_reg_reg(RegE, RegD),
+            0x5C => self.op_ld_reg_reg(RegE, RegH),
             0x5E => {
                 println!("LD E,(HL)");
                 self.cpu.regs[RegE] = self.cpu.memory[self.get_hl() as usize];
                 self.cpu.pc += 1;
                 return 8;
             }
-            0x5F => {
-                println!("LD E,A");
-                self.cpu.regs[RegE] = self.cpu.regs[RegA];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x6C => {
-                println!("LD L,H");
-                self.cpu.regs[RegL] = self.cpu.regs[RegH];
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x5F => self.op_ld_reg_reg(RegE, RegA),
+            0x6C => self.op_ld_reg_reg(RegL, RegH),
             0x6E => {
                 println!("LD L,(HL)");
                 self.cpu.regs[RegL] = self.cpu.memory[self.get_hl() as usize];
                 self.cpu.pc += 1;
                 return 8;
             }
-            0x6F => {
-                println!("LD L,A");
-                self.cpu.regs[RegL] = self.cpu.regs[RegA];
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x6F => self.op_ld_reg_reg(RegL, RegA),
             0x71 => {
                 println!("LD (HL),C");
                 self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegC];
@@ -775,24 +722,9 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
-            0x78 => {
-                println!("LD A,B");
-                self.cpu.regs[RegA] = self.cpu.regs[RegB];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x79 => {
-                println!("LD A,C");
-                self.cpu.regs[RegA] = self.cpu.regs[RegC];
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0x7C => {
-                println!("LD A,H");
-                self.cpu.regs[RegA] = self.cpu.regs[RegH];
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0x78 => self.op_ld_reg_reg(RegA, RegB),
+            0x79 => self.op_ld_reg_reg(RegA, RegC),
+            0x7C => self.op_ld_reg_reg(RegA, RegH),
             0x7E => {
                 println!("LD A,(HL)");
                 self.cpu.regs[RegA] = self.cpu.memory[self.get_hl() as usize];
@@ -869,26 +801,8 @@ impl GameBoyEmulator {
             }
             0xA9 => self.op_xor_reg(RegC),
             0xAF => self.op_xor_reg(RegA),
-            0xB0 => {
-                println!("OR B");
-                self.cpu.regs[RegA] = self.cpu.regs[RegA] | self.cpu.regs[RegB];
-                self.set_z_flag(self.cpu.regs[RegA] == 0);
-                self.set_c_flag(false);
-                self.set_h_flag(false);
-                self.set_n_flag(false);
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0xB1 => {
-                println!("OR C");
-                self.cpu.regs[RegA] = self.cpu.regs[RegA] | self.cpu.regs[RegC];
-                self.set_z_flag(self.cpu.regs[RegA] == 0);
-                self.set_c_flag(false);
-                self.set_h_flag(false);
-                self.set_n_flag(false);
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0xB0 => self.op_or_reg(RegB),
+            0xB1 => self.op_or_reg(RegC),
             0xC1 => {
                 println!("POP BC");
                 self.pop_to_pair(RegB, RegC);
