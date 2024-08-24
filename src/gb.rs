@@ -314,9 +314,9 @@ impl GameBoyEmulator {
 
     fn ret(&mut self) {
         let mut new_address = 0;
-        self.cpu.sp += 2;
         new_address |= self.cpu.memory[self.cpu.sp as usize] as usize;
         new_address |= (self.cpu.memory[self.cpu.sp as usize + 1] as usize) << 8;
+        self.cpu.sp += 2;
         self.cpu.pc = new_address;
     }
 
@@ -410,18 +410,18 @@ impl GameBoyEmulator {
     fn op_pop_pair(&mut self, left: Regs, right: Regs) -> u64 {
         println!("POP {}{}", REGS_TO_CHAR[left], REGS_TO_CHAR[right]);
 
-        self.cpu.sp += 2;
         self.cpu.regs[left] = self.cpu.memory[self.cpu.sp as usize + 1];
         self.cpu.regs[right] = self.cpu.memory[self.cpu.sp as usize];
+        self.cpu.sp += 2;
         
         self.cpu.pc += 1;
         return 12;
     }
     fn op_push_pair(&mut self, left: Regs, right: Regs) -> u64 {
         println!("PUSH {}{}", REGS_TO_CHAR[left], REGS_TO_CHAR[right]);
+        self.cpu.sp -= 2;
         self.cpu.memory[self.cpu.sp as usize] = self.cpu.regs[right];
         self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[left];
-        self.cpu.sp -= 2;
         self.cpu.pc += 1;
         return 16;
     }
@@ -779,6 +779,7 @@ impl GameBoyEmulator {
                 println!("CALL a16");
                 let mut next_instruction = (self.cpu.pc & 0xFFFF) as u16 + 3; // offsetting to the next instruction
                 // stores in little endian
+                self.cpu.sp -= 2; // apparently the stack is "upside down"
                 self.cpu.memory[self.cpu.sp as usize] = (next_instruction & 0x00FF) as u8;
                 self.cpu.memory[self.cpu.sp as usize + 1] = (next_instruction >> 8) as u8;
 
@@ -786,7 +787,6 @@ impl GameBoyEmulator {
                 new_address |= self.read_next(1) as usize;
                 new_address |= (self.read_next(2) as usize) << 8;
                 
-                self.cpu.sp -= 2; // apparently the stack is "upside down"
                 self.cpu.pc =  new_address;
                 return 24
             }
@@ -834,9 +834,9 @@ impl GameBoyEmulator {
                 println!("RST 28H");
                 let next_instruction = (self.cpu.pc & 0xFFFF) as u16 + 1; // offsetting to the next instruction
                 // stores in little endian
+                self.cpu.sp -= 2;
                 self.cpu.memory[self.cpu.sp as usize] = (next_instruction & 0x00FF) as u8;
                 self.cpu.memory[self.cpu.sp as usize + 1] = (next_instruction >> 8) as u8;
-                self.cpu.sp -= 2;
                 self.cpu.pc = 0x0028;
                 return 16
             }
@@ -963,7 +963,7 @@ impl Emulator for GameBoyEmulator {
         self.cpu.memory[0..rom.len()].copy_from_slice(rom);
 
         let mut cycles_count = 0;
-        // let mut steps = 4;
+        let mut steps = 100000;
         loop {
             if self.cpu.ime {
                 // https://gbdev.io/pandocs/Interrupts.html#ffff--ie-interrupt-enable
@@ -974,9 +974,9 @@ impl Emulator for GameBoyEmulator {
                 // vblank interrupt
                 else if interrupts & 1 == 1 {
                     let cur_instruction = self.cpu.pc;
+                    self.cpu.sp -= 2;
                     self.cpu.memory[self.cpu.sp as usize] = (cur_instruction & 0x00FF) as u8;
                     self.cpu.memory[self.cpu.sp as usize + 1] = (cur_instruction >> 8) as u8;
-                    self.cpu.sp -= 2;
                     
                     self.cpu.pc = 0x40;
                     
@@ -987,16 +987,12 @@ impl Emulator for GameBoyEmulator {
                     todo!(" unhandled interrupt {}", interrupts)
                 }
             }
-            // if steps == 0 {
-            //     self.print_regs();
-            //     break;
-            // }
             cycles_count += self.compute(rom);
             // if self.cpu.pc == 0x100 {
             //     self.print_regs();
             //     break;
             // }
-            // steps -= 1;
+            steps -= 1;
 
             if cycles_count > 456 {
                 // draw scan line
@@ -1009,6 +1005,11 @@ impl Emulator for GameBoyEmulator {
                     self.cpu.memory[0xff44] = 0;
                 }
                 cycles_count -= 456;
+            }
+            if steps == 0 {
+                self.print_regs();
+                self.ram_viewer();
+                break;
             }
         }
     }
