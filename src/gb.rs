@@ -135,6 +135,17 @@ const RegE: usize = 5;
 const RegH: usize = 6;
 const RegL: usize = 7;
 
+const REGS_TO_CHAR: [char; 8] = [
+    'A',
+    'F',
+    'B',
+    'C',
+    'D',
+    'E',
+    'H',
+    'L'
+];
+
 impl GameBoyEmulator {
     pub fn new() -> GameBoyEmulator {
         GameBoyEmulator { cpu: Cpu::new() }
@@ -340,6 +351,17 @@ impl GameBoyEmulator {
         self.set_n_flag(false);
         self.set_z_flag(self.cpu.regs[reg] == 0);
         self.set_h_flag(half_inc + half_reg > 0xF);
+    }
+
+    fn op_xor_reg(&mut self, reg: Regs) -> u64 {
+        println!("XOR {}", REGS_TO_CHAR[reg]);
+        self.cpu.regs[RegA] ^= self.cpu.regs[reg];
+        self.set_z_flag(self.cpu.regs[RegA] == 0);
+        self.set_c_flag(false);
+        self.set_h_flag(false);
+        self.set_n_flag(false);
+        self.cpu.pc += 1;
+        return 4;
     }
 
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
@@ -845,26 +867,8 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 4;
             }
-            0xA9 => {
-                println!("XOR C");
-                self.cpu.regs[RegA] ^= self.cpu.regs[RegC];
-                self.set_z_flag(self.cpu.regs[RegA] == 0);
-                self.set_c_flag(false);
-                self.set_h_flag(false);
-                self.set_n_flag(false);
-                self.cpu.pc += 1;
-                return 4;
-            }
-            0xAF => {
-                println!("XOR A");
-                self.cpu.regs[RegA] = 0;
-                self.set_z_flag(true);
-                self.set_c_flag(false);
-                self.set_h_flag(false);
-                self.set_n_flag(false);
-                self.cpu.pc += 1;
-                return 4;
-            }
+            0xA9 => self.op_xor_reg(RegC),
+            0xAF => self.op_xor_reg(RegA),
             0xB0 => {
                 println!("OR B");
                 self.cpu.regs[RegA] = self.cpu.regs[RegA] | self.cpu.regs[RegB];
@@ -916,7 +920,6 @@ impl GameBoyEmulator {
             }
             0xC5 => {
                 println!("PUSH BC");
-                println!("{:4X}", self.cpu.sp);
                 self.cpu.memory[self.cpu.sp as usize] = self.cpu.regs[RegC];
                 self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[RegB];
                 self.cpu.sp -= 2;
