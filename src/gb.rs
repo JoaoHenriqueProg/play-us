@@ -4,6 +4,18 @@ use std::str::Bytes;
 use crate::emulator::Emulator;
 use eframe::egui::{self, Color32, RichText, Sense};
 
+const DEBUG: bool = true;
+fn printlnme<T: ToString>(msg: T) {
+    if DEBUG {
+        println!("{}", msg.to_string());
+    }
+}
+fn printme<T: ToString>(msg: T) {
+    if DEBUG {
+        print!("{}", msg.to_string());
+    }
+}
+
 struct RamViewer {
     ram: [u8; 64 * 1024],
     address_to_look: String,
@@ -153,7 +165,7 @@ impl GameBoyEmulator {
 
     fn set_hram(&mut self, address: usize, value: u8) {
         self.cpu.memory[address + 0xFF00] = value;
-        println!("Set {:02X} at {:02X} (or {}) of hram", value, address, address + 0xFF00);
+        printlnme(format!("Set {:02X} at {:02X} (or {}) of hram", value, address, address + 0xFF00));
         
         // turns out this high area is used for a ton of flags that the hardware plays with
         match address {
@@ -171,15 +183,17 @@ impl GameBoyEmulator {
                     panic!("god knows what");
                 }
             }
-            _ => println!("set_hram should check for {:04X}", address)
+            _ => printlnme(format!("set_hram should check for {:04X}", address))
         }
     }
     fn get_hram(&mut self, address: usize) -> u8 {
-        println!(
-            "Got {:02X} at {:02X} (or {}) of hram",
-            self.cpu.memory[address + 0xFF00],
-            address,
-            address + 0xFF00
+        printlnme(
+            format!(
+                "Got {:02X} at {:02X} (or {}) of hram",
+                self.cpu.memory[address + 0xFF00],
+                address,
+                address + 0xFF00
+                )
         );
         return self.cpu.memory[address + 0xFF00];
     }
@@ -321,7 +335,7 @@ impl GameBoyEmulator {
     }
 
     fn op_dec_reg(&mut self, reg: Regs) -> u64 {
-        println!("DEC {}", REGS_TO_CHAR[reg]);
+        printlnme(format!("DEC {}", REGS_TO_CHAR[reg]));
 
         let half_reg = self.cpu.regs[reg] & 0x0F;
         let half_one = 1;
@@ -336,7 +350,7 @@ impl GameBoyEmulator {
         return 4;
     }
     fn op_inc_reg(&mut self, reg: Regs) -> u64 {
-        println!("INC {}", REGS_TO_CHAR[reg]);
+        printlnme(format!("INC {}", REGS_TO_CHAR[reg]));
 
         let half_reg = self.cpu.regs[reg] & 0x0F;
         let half_inc = 1;
@@ -353,7 +367,7 @@ impl GameBoyEmulator {
 
     // full op functions
     fn op_xor_reg(&mut self, reg: Regs) -> u64 {
-        println!("XOR {}", REGS_TO_CHAR[reg]);
+        printlnme(format!("XOR {}", REGS_TO_CHAR[reg]));
         self.cpu.regs[RegA] ^= self.cpu.regs[reg];
         self.set_z_flag(self.cpu.regs[RegA] == 0);
         self.set_c_flag(false);
@@ -363,7 +377,7 @@ impl GameBoyEmulator {
         return 4;
     }
     fn op_or_reg(&mut self, reg: Regs) -> u64 {
-        println!("OR {}", REGS_TO_CHAR[reg]);
+        printlnme(format!("OR {}", REGS_TO_CHAR[reg]));
         self.cpu.regs[RegA] = self.cpu.regs[RegA] | self.cpu.regs[reg];
         self.set_z_flag(self.cpu.regs[RegA] == 0);
         self.set_c_flag(false);
@@ -373,13 +387,13 @@ impl GameBoyEmulator {
         return 4;
     }
     fn op_ld_reg_reg(&mut self, dst: Regs, src: Regs) -> u64 {
-        println!("LD {},{}", REGS_TO_CHAR[dst],REGS_TO_CHAR[src]);
+        printlnme(format!("LD {},{}", REGS_TO_CHAR[dst],REGS_TO_CHAR[src]));
         self.cpu.regs[dst] = self.cpu.regs[src];
         self.cpu.pc += 1;
         return 4;
     }
     fn op_sub_reg(&mut self, reg: Regs) -> u64 {
-        println!("SUB {}", REGS_TO_CHAR[reg]);
+        printlnme(format!("SUB {}", REGS_TO_CHAR[reg]));
 
         let half_a: u8 = self.cpu.regs[RegA] & 0x0F;
         let half_r = self.cpu.regs[reg.clone()] & 0x0F;
@@ -396,19 +410,19 @@ impl GameBoyEmulator {
         return 4;
     }
     fn op_ld_hl_reg(&mut self, src: Regs) -> u64 {
-        println!("LD (HL),{}", REGS_TO_CHAR[src]);
+        printlnme(format!("LD (HL),{}", REGS_TO_CHAR[src]));
         self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[src];
         self.cpu.pc += 1;
         return 8;
     }
     fn op_ld_reg_hl(&mut self, dst: Regs) -> u64 {
-        println!("LD {},(HL)", REGS_TO_CHAR[dst]);
+        printlnme(format!("LD {},(HL)", REGS_TO_CHAR[dst]));
         self.cpu.regs[dst] = self.cpu.memory[self.get_hl() as usize];
         self.cpu.pc += 1;
         return 8;
     }
     fn op_pop_pair(&mut self, left: Regs, right: Regs) -> u64 {
-        println!("POP {}{}", REGS_TO_CHAR[left], REGS_TO_CHAR[right]);
+        printlnme(format!("POP {}{}", REGS_TO_CHAR[left], REGS_TO_CHAR[right]));
 
         self.cpu.regs[left] = self.cpu.memory[self.cpu.sp as usize + 1];
         self.cpu.regs[right] = self.cpu.memory[self.cpu.sp as usize];
@@ -418,7 +432,7 @@ impl GameBoyEmulator {
         return 12;
     }
     fn op_push_pair(&mut self, left: Regs, right: Regs) -> u64 {
-        println!("PUSH {}{}", REGS_TO_CHAR[left], REGS_TO_CHAR[right]);
+        printlnme(format!("PUSH {}{}", REGS_TO_CHAR[left], REGS_TO_CHAR[right]));
         self.cpu.sp -= 2;
         self.cpu.memory[self.cpu.sp as usize] = self.cpu.regs[right];
         self.cpu.memory[self.cpu.sp as usize + 1] = self.cpu.regs[left];
@@ -426,7 +440,7 @@ impl GameBoyEmulator {
         return 16;
     }
     fn op_ld_reg_d8(&mut self, dst: Regs) -> u64 {
-        println!("LD {},d8", REGS_TO_CHAR[dst]);
+        printlnme(format!("LD {},d8", REGS_TO_CHAR[dst]));
         self.cpu.regs[dst] = self.read_next(1);
         self.cpu.pc += 2;
         return 8;
@@ -436,7 +450,7 @@ impl GameBoyEmulator {
     // the game boy architecture and stuff
     fn compute(&mut self, rom: &[u8]) -> u64 {
         // returns the cpu cycles it takes, so in the future I can implement real cpu bottleneck
-        print!("{:04X}: ", self.cpu.pc);
+        printme(format!("{:04X}: ", self.cpu.pc));
         let checked_functions: [u8; 15] = [
             0, 0xC3, 0xAF, 0x21, 0x0E, 0x06, 0x32, 0x05, 0x20, 0x0D, 0x3E, 0xF3, 0xE0, 0xF0, 0xFE,
         ];
@@ -446,12 +460,12 @@ impl GameBoyEmulator {
         match self.read() {
             // 5B (LD E,E)
             0 | 0x5B => {
-                println!("NOP");
+                printlnme("NOP");
                 self.cpu.pc += 1;
                 return 4;
             }
             0x01 => {
-                println!("LD BC,d16");
+                printlnme("LD BC,d16");
                 // regs -> b c -- mem -> x y
                 //         y x
                 self.cpu.regs[RegC] = self.read_next(1);
@@ -462,7 +476,7 @@ impl GameBoyEmulator {
             0x05 => self.op_dec_reg(RegB),
             0x06 => self.op_ld_reg_d8(RegB),
             0x0B => {
-                println!("DEC BC");
+                printlnme("DEC BC");
                 self.dec_pair(RegB, RegC);
                 self.cpu.pc += 1;
                 return 8;
@@ -471,7 +485,7 @@ impl GameBoyEmulator {
             0x0D => self.op_dec_reg(RegC),
             0x0E => self.op_ld_reg_d8(RegC),
             0x0F => {
-                println!("RRCA");
+                printlnme("RRCA");
                 self.set_c_flag(self.cpu.regs[RegA] & 1 == 1);
                 self.cpu.regs[RegA] = self.cpu.regs[RegA].rotate_right(1);
                 self.set_z_flag(false);
@@ -482,34 +496,34 @@ impl GameBoyEmulator {
             }
             // todo: to check
             0x11 => {
-                println!("LD DE,d16");
+                printlnme("LD DE,d16");
                 self.cpu.regs[RegE] = self.read_next(1);
                 self.cpu.regs[RegD] = self.read_next(2);
                 self.cpu.pc += 3;
                 return 12;
             }
             0x12 => {
-                println!("LD (DE),A");
+                printlnme("LD (DE),A");
                 let address = 0 | (self.cpu.regs[RegD] as usize) << 8 | (self.cpu.regs[RegE] as usize);
                 self.cpu.memory[address] = self.cpu.regs[RegA];
                 self.cpu.pc += 1;
                 return 8;
             }
             0x13 => {
-                println!("INC DE");
+                printlnme("INC DE");
                 self.inc_pair(RegD, RegE);
                 self.cpu.pc += 1;
                 return 8;
             }
             0x16 => self.op_ld_reg_d8(RegD),
             0x18 => {
-                println!("JR a8");
+                printlnme("JR a8");
                 self.cpu.pc += 1;
                 self.cpu.pc = (self.cpu.pc as i128 + (self.read() as i8) as i128) as usize + 1;
                 return 12;
             }
             0x19 => {
-                println!("ADD HL, DE");
+                printlnme("ADD HL, DE");
                 let hl = (self.cpu.regs[RegH] as u16) << 8 | self.cpu.regs[RegL] as u16;
                 let de = (self.cpu.regs[RegD] as u16) << 8 | self.cpu.regs[RegE] as u16;
                 // aparently the half flag takes in bit 11 and 12 as half in 16 bit math
@@ -523,7 +537,7 @@ impl GameBoyEmulator {
                 return 8;
             }
             0x1A => {
-                println!("LD A,(DE)");
+                printlnme("LD A,(DE)");
                 let de = (self.cpu.regs[RegD] as u16) << 8 | self.cpu.regs[RegE] as u16;
                 self.cpu.regs[RegA] = self.cpu.memory[de as usize];
                 self.cpu.pc += 1;
@@ -531,7 +545,7 @@ impl GameBoyEmulator {
             }
             0x1C => self.op_inc_reg(RegE),
             0x20 => {
-                println!("JR NZ,r8");
+                printlnme("JR NZ,r8");
                 // com branch: 12
                 // sem branch: 8
                 if self.get_z_flag() {
@@ -545,7 +559,7 @@ impl GameBoyEmulator {
                 return 12;
             }
             0x21 => {
-                println!("LD HL,d16");
+                printlnme("LD HL,d16");
                 // regs -> h l -- mem -> x y
                 //         y x
                 // todo: check if this is correct later
@@ -555,20 +569,20 @@ impl GameBoyEmulator {
                 return 12;
             }
             0x22 => {
-                println!("LD (HL+),A");
+                printlnme("LD (HL+),A");
                 self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegA];
                 self.inc_pair(RegH, RegL);
                 self.cpu.pc += 1;
                 return 8;
             }
             0x23 => {
-                println!("INC HL");
+                printlnme("INC HL");
                 self.inc_pair(RegH, RegL);
                 self.cpu.pc += 1;
                 return 8;
             }
             0x28 => {
-                println!("JR Z,r8");
+                printlnme("JR Z,r8");
                 // com branch: 12
                 // sem branch: 8
                 if !self.get_z_flag() {
@@ -580,7 +594,7 @@ impl GameBoyEmulator {
                 return 12;
             }
             0x2A => {
-                println!("LD A,(HL+)");
+                printlnme("LD A,(HL+)");
                 let mut address = 0;
                 address |= ((self.get_hl() & 0x0F) as usize) << 8; // putting l left
                 address |= ((self.get_hl() & 0xF0) as usize) >> 8; // putting h right
@@ -592,7 +606,7 @@ impl GameBoyEmulator {
             }
             0x2C => self.op_inc_reg(RegL),
             0x2F => {
-                println!("CPL");
+                printlnme("CPL");
                 // check for half carry first of all
                 self.cpu.regs[RegA] = !self.cpu.regs[RegA];
                 self.set_n_flag(true);
@@ -601,7 +615,7 @@ impl GameBoyEmulator {
                 return 4;
             }
             0x31 => {
-                println!("LD SP,d16");
+                printlnme("LD SP,d16");
                 let mut value_d16 = 0;
                 value_d16 |= self.read_next(1) as usize;
                 value_d16 |= (self.read_next(2) as usize) << 8;
@@ -610,14 +624,14 @@ impl GameBoyEmulator {
                 return 12;
             }
             0x32 => {
-                println!("LD (HL-),A");
+                printlnme("LD (HL-),A");
                 self.cpu.memory[self.get_hl() as usize] = self.cpu.regs[RegA]; // SINCE WHEN WAS THIS LINE COMMENTED
                 self.dec_pair(RegH, RegL);
                 self.cpu.pc += 1;
                 return 8;
             }
             0x34 => {
-                println!("INC (HL)");
+                printlnme("INC (HL)");
                 let cur_val = self.cpu.memory[self.get_hl() as usize];
                 let half_reg = cur_val & 0x0F;
                 let half_inc = 1;
@@ -631,7 +645,7 @@ impl GameBoyEmulator {
                 return 12;
             }
             0x35 => {
-                println!("DEC (HL)");
+                printlnme("DEC (HL)");
                 let cur_val = self.cpu.memory[self.get_hl() as usize];
                 let half_val = cur_val & 0x0F;
                 let half_one = 1;
@@ -645,7 +659,7 @@ impl GameBoyEmulator {
                 return 12
             }
             0x36 => {
-                println!("LD (HL),d8");
+                printlnme("LD (HL),d8");
                 self.cpu.memory[self.get_hl() as usize] = self.read_next(1);
                 self.cpu.pc += 2;
                 return 12;
@@ -680,7 +694,7 @@ impl GameBoyEmulator {
             0x7C => self.op_ld_reg_reg(RegA, RegH),
             0x7E => self.op_ld_reg_hl(RegA),
             0x87 => {
-                println!("ADD A,A");
+                printlnme("ADD A,A");
                 self.set_h_flag((self.cpu.regs[RegA] & 0xF) + (self.cpu.regs[RegA] & 0xF) > 0xF);
                 let result = self.cpu.regs[RegA].wrapping_add(self.cpu.regs[RegA]);
                 self.set_c_flag(result < self.cpu.regs[RegA]);
@@ -697,7 +711,7 @@ impl GameBoyEmulator {
             0x94 => self.op_sub_reg(RegH),
             0x95 => self.op_sub_reg(RegL),
             0xA1 => {
-                println!("AND B");
+                printlnme("AND B");
                 self.cpu.regs[RegA] &= self.cpu.regs[RegB];
                 self.set_z_flag(self.cpu.regs[RegA] == 0);
                 self.set_c_flag(false);
@@ -707,7 +721,7 @@ impl GameBoyEmulator {
                 return 4;
             }
             0xA7 => {
-                println!("AND A");
+                printlnme("AND A");
                 // todo: maybe this could be removed
                 self.cpu.regs[RegA] &= self.cpu.regs[RegA];
                 self.set_z_flag(self.cpu.regs[RegA] == 0);
@@ -723,7 +737,7 @@ impl GameBoyEmulator {
             0xB1 => self.op_or_reg(RegC),
             0xC1 => self.op_pop_pair(RegB, RegC),
             0xC0 => {
-                println!("RET NZ");
+                printlnme("RET NZ");
                 if self.get_z_flag() {
                     self.cpu.pc += 1;
                     return 8;
@@ -732,7 +746,7 @@ impl GameBoyEmulator {
                 return 20;
             }
             0xC3 => {
-                println!("JMP a16");
+                printlnme("JMP a16");
                 // and this is where I learnt the difference between big and small endian
                 // now I just wonder where else have I not flipped the bytes where I should
                 let mut new_address = 0;
@@ -743,7 +757,7 @@ impl GameBoyEmulator {
             }
             0xC5 => self.op_push_pair(RegB, RegC),
             0xC8 => {
-                println!("RET Z");
+                printlnme("RET Z");
                 if !self.get_z_flag() {
                     self.cpu.pc += 1;
                     return 8
@@ -752,12 +766,12 @@ impl GameBoyEmulator {
                 return 20;
             }
             0xC9 => {
-                println!("RET");
+                printlnme("RET");
                 self.ret();
                 return 16;
             }
             0xCA => {
-                println!("JP Z,a16");
+                printlnme("JP Z,a16");
                 // com branch: 16
                 // sem branch: 12
                 if !self.get_z_flag() {
@@ -771,12 +785,12 @@ impl GameBoyEmulator {
                 return 16;
             }
             0xCB => {
-                print!("CB: ");
+                printme("CB: ");
                 self.cpu.pc += 1;
                 return self.compute_cb();
             }
             0xCD => {
-                println!("CALL a16");
+                printlnme("CALL a16");
                 let mut next_instruction = (self.cpu.pc & 0xFFFF) as u16 + 3; // offsetting to the next instruction
                 // stores in little endian
                 self.cpu.sp -= 2; // apparently the stack is "upside down"
@@ -793,21 +807,21 @@ impl GameBoyEmulator {
             0xD1 => self.op_pop_pair(RegD, RegE),
             0xD5 => self.op_push_pair(RegD, RegE),
             0xD9 => {
-                println!("RETI");
+                printlnme("RETI");
                 self.cpu.ime = true;
                 self.ret();
                 return 16
             }
             0xE1 => self.op_pop_pair(RegH, RegL),
             0xE2 => {
-                println!("LD (C),A");
+                printlnme("LD (C),A");
                 self.cpu.memory[self.cpu.regs[RegC] as usize + 0xFF00] = self.cpu.regs[RegA];
                 self.cpu.pc += 1;
                 return 8;
             }
             0xE5 => self.op_push_pair(RegH, RegL),
             0xE6 => {
-                println!("AND d8");
+                printlnme("AND d8");
                 self.cpu.regs[RegA] &= self.read_next(1);
                 self.set_z_flag(self.cpu.regs[RegA] == 0);
                 self.set_n_flag(false);
@@ -817,12 +831,12 @@ impl GameBoyEmulator {
                 return 8;
             }
             0xE9 => {
-                println!("JP (HL)");
+                printlnme("JP (HL)");
                 self.cpu.pc = self.get_hl() as usize;
                 return 8;
             }
             0xEA => {
-                println!("LD (a16),A");
+                printlnme("LD (a16),A");
                 let mut address = 0;
                 address |= self.read_next(1) as usize;
                 address |= (self.read_next(2) as usize) << 8;
@@ -831,7 +845,7 @@ impl GameBoyEmulator {
                 return 16;
             }
             0xEF => {
-                println!("RST 28H");
+                printlnme("RST 28H");
                 let next_instruction = (self.cpu.pc & 0xFFFF) as u16 + 1; // offsetting to the next instruction
                 // stores in little endian
                 self.cpu.sp -= 2;
@@ -841,13 +855,13 @@ impl GameBoyEmulator {
                 return 16
             }
             0xE0 => {
-                println!("LDH (a8),A");
+                printlnme("LDH (a8),A");
                 self.set_hram(self.read_next(1) as usize, self.cpu.regs[RegA]);
                 self.cpu.pc += 2;
                 return 12;
             }
             0xF0 => {
-                println!("LDH A,(a8)");
+                printlnme("LDH A,(a8)");
                 self.cpu.regs[RegA] = self.get_hram(self.read_next(1) as usize);
                 // I spent almost a whole day trying to find out why where the game in an infinite loop
                 // Till I had the great idea of using the concept of "searching online"
@@ -858,14 +872,14 @@ impl GameBoyEmulator {
             }
             0xF1 => self.op_pop_pair(RegA, RegF),
             0xF3 => {
-                println!("DI");
+                printlnme("DI");
                 self.cpu.ime = false;
                 self.cpu.pc += 1;
                 return 4;
             }
             0xF5 => self.op_push_pair(RegA, RegF),
             0xFA => {
-                println!("LD A,(a16)");
+                printlnme("LD A,(a16)");
                 let mut address = 0;
                 address |= self.read_next(1) as usize;
                 address |= (self.read_next(2) as usize) << 8;
@@ -874,13 +888,13 @@ impl GameBoyEmulator {
                 return 16;
             }
             0xFB => {
-                println!("EI");
+                printlnme("EI");
                 self.cpu.ime = true;
                 self.cpu.pc += 1;
                 return 4;
             }
             0xFE => {
-                println!("CP d8");
+                printlnme("CP d8");
                 let value = self.read_next(1);
                 let half_a: u8 = self.cpu.regs[RegA] & 0x0F;
                 let half_v = value & 0x0F;
@@ -912,7 +926,7 @@ impl GameBoyEmulator {
         match self.read() {
             0x30 | 0x31 | 0x32 | 0x33 | 0x34 | 0x35 | 0x36 | 0x37 => {
                 if self.read() >= 0x30 && self.read() <= 0x35 { // regs b to l
-                    println!("SWAP R"); // todo: name correct reg
+                    printlnme("SWAP R"); // todo: name correct reg
                     let cur_reg = self.cpu.regs[(self.read() & 0x0F) as usize + 1];
                     let new_reg = 0 | (cur_reg << 4) | (cur_reg >> 4);
                     self.cpu.regs[(self.read() & 0x0F) as usize + 1] = new_reg;
@@ -921,7 +935,7 @@ impl GameBoyEmulator {
                 } else if self.read() == 0x36 {
                     todo!("BC SWAP (HL)")
                 } else {
-                    println!("SWAP A");
+                    printlnme("SWAP A");
                     let cur_reg = self.cpu.regs[RegA];
                     let new_reg = 0 | (cur_reg << 4) | (cur_reg >> 4);
                     self.cpu.regs[RegA] = new_reg;
@@ -935,7 +949,7 @@ impl GameBoyEmulator {
             }
             // RES instructions
             0x87 => {
-                println!("RES 0,A");
+                printlnme("RES 0,A");
                 self.cpu.regs[RegA] &= !1;
                 self.cpu.pc += 1;
                 return 8
@@ -992,7 +1006,7 @@ impl Emulator for GameBoyEmulator {
             //     self.print_regs();
             //     break;
             // }
-            steps -= 1;
+            // steps -= 1;
 
             if cycles_count > 456 {
                 // draw scan line
