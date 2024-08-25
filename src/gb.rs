@@ -107,6 +107,7 @@ struct Cpu {
     // AF, BC, DE, HL, by the gods what does it mean why this order
     pc: usize,
     ime: bool,
+    ime_delay: bool,
     sp: u16, // stack pointer
 }
 
@@ -128,6 +129,7 @@ impl Cpu {
             ],
             pc: 0x100,
             ime: false,
+            ime_delay: false,
             sp: 0xFFFE,
         }
     }
@@ -457,6 +459,14 @@ impl GameBoyEmulator {
         if !checked_functions.contains(&self.read()) {
             // panic!("{:02X}", self.read())
         }
+
+        // if self.cpu.sp == 0xcff7 {
+        //     println!();
+        //     self.print_regs();
+        //     println!("{:02X}", self.cpu.pc);
+        //     self.ram_viewer(Some(0xcfe0));
+        // }
+
         match self.read() {
             // 5B (LD E,E)
             0 | 0x5B => {
@@ -890,6 +900,7 @@ impl GameBoyEmulator {
             0xFB => {
                 printlnme("EI");
                 self.cpu.ime = true;
+                self.cpu.ime_delay = true;
                 self.cpu.pc += 1;
                 return 4;
             }
@@ -979,7 +990,7 @@ impl Emulator for GameBoyEmulator {
         let mut cycles_count = 0;
         let mut steps = 100000;
         loop {
-            if self.cpu.ime {
+            if self.cpu.ime  && !self.cpu.ime_delay{
                 // https://gbdev.io/pandocs/Interrupts.html#ffff--ie-interrupt-enable
                 let interrupts = self.cpu.memory[0xff0f] & self.cpu.memory[0xffff];
                 
@@ -997,9 +1008,12 @@ impl Emulator for GameBoyEmulator {
                     self.cpu.ime = false;
                     
                     self.cpu.memory[0xff0f] &= !0x0001;
+                    cycles_count += 20;
                 } else {
                     todo!(" unhandled interrupt {}", interrupts)
                 }
+            } else if self.cpu.ime_delay {
+                self.cpu.ime_delay = false
             }
             cycles_count += self.compute(rom);
             // if self.cpu.pc == 0x100 {
@@ -1018,7 +1032,7 @@ impl Emulator for GameBoyEmulator {
                 if self.cpu.memory[0xff44] == 154 {
                     self.cpu.memory[0xff44] = 0;
                 }
-                cycles_count -= 456;
+                cycles_count = 0;
             }
             if steps == 0 {
                 self.print_regs();
