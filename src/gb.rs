@@ -33,8 +33,8 @@ impl Default for RamViewer {
 }
 
 impl RamViewer {
-    fn new(ram: [u8; 64 * 1024]) -> Self {
-        Self { ram, address_to_look: "".to_string(), starting_address: 0 }
+    fn new(ram: [u8; 64 * 1024], start: usize) -> Self {
+        Self { ram, address_to_look: "".to_string(), starting_address: start }
     }
 }
 
@@ -307,12 +307,12 @@ impl GameBoyEmulator {
         println!("SP={:04X}", self.cpu.sp);
     }
 
-    fn ram_viewer(&self) {
+    fn ram_viewer(&self, start: Option<usize>) {
         let options = eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 720.0]),
             ..Default::default()
         };
-        let rv = RamViewer::new(self.cpu.memory);
+        let rv = RamViewer::new(self.cpu.memory, start.unwrap_or_default());
         eframe::run_native(
             "RAM viewer",
             options,
@@ -911,7 +911,7 @@ impl GameBoyEmulator {
             _ => {
                 println!();
                 self.print_regs();
-                self.ram_viewer();
+                self.ram_viewer(None);
                 todo!(
                     "{:02X}\nPC: {:04X} | {}",
                     self.read(),
@@ -1022,7 +1022,7 @@ impl Emulator for GameBoyEmulator {
             }
             if steps == 0 {
                 self.print_regs();
-                self.ram_viewer();
+                self.ram_viewer(None);
                 break;
             }
         }
