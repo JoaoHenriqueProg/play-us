@@ -4,7 +4,7 @@ use std::str::Bytes;
 use crate::emulator::Emulator;
 use eframe::egui::{self, Color32, RichText, Sense};
 
-const DEBUG: bool = true;
+const DEBUG: bool = false;
 fn printlnme<T: ToString>(msg: T) {
     if DEBUG {
         println!("{}", msg.to_string());
@@ -447,6 +447,12 @@ impl GameBoyEmulator {
         self.cpu.pc += 2;
         return 8;
     }
+    fn op_inc_pair(&mut self, left: Regs, right: Regs) -> u64 {
+        printlnme(format!("INC {}{}", REGS_TO_CHAR[left], REGS_TO_CHAR[right]));
+        self.inc_pair(left, right);
+        self.cpu.pc += 1;
+        return 8;
+    }
 
     // I know I probably shouldn't start directly implement opcodes, but preguicinha of doing
     // the game boy architecture and stuff
@@ -519,12 +525,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
-            0x13 => {
-                printlnme("INC DE");
-                self.inc_pair(RegD, RegE);
-                self.cpu.pc += 1;
-                return 8;
-            }
+            0x13 => self.op_inc_pair(RegD, RegE),
             0x16 => self.op_ld_reg_d8(RegD),
             0x18 => {
                 printlnme("JR a8");
@@ -585,12 +586,7 @@ impl GameBoyEmulator {
                 self.cpu.pc += 1;
                 return 8;
             }
-            0x23 => {
-                printlnme("INC HL");
-                self.inc_pair(RegH, RegL);
-                self.cpu.pc += 1;
-                return 8;
-            }
+            0x23 => self.op_inc_pair(RegH, RegL),
             0x28 => {
                 printlnme("JR Z,r8");
                 // com branch: 12
