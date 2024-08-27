@@ -1,8 +1,9 @@
 use core::panic;
 use std::str::Bytes;
 
-use crate::emulator::Emulator;
+use crate::{emulator::Emulator, video::Screen};
 use eframe::egui::{self, Color32, RichText, Sense};
+use sdl2::{event::Event, pixels::Color};
 
 const DEBUG: bool = false;
 fn printlnme<T: ToString>(msg: T) {
@@ -976,6 +977,9 @@ impl GameBoyEmulator {
 
 impl Emulator for GameBoyEmulator {
     fn run(&mut self, rom: &[u8]) {
+        let pixel_size = 4;
+        let mut screen = Screen::new(Some(160 * pixel_size), Some(144 * pixel_size));
+
         // for now it doesn't matter, the tetris rom doesn't have bank switching (as far as I now)
         if rom.len() > 1024 * 32 {
             todo!("rom too big, implement bank switching")
@@ -985,7 +989,31 @@ impl Emulator for GameBoyEmulator {
 
         let mut cycles_count = 0;
         let mut steps = 100000;
-        loop {
+        'main_loop: loop {
+            for event in screen.event_pump.poll_iter() {
+                match event {
+                    Event::Quit { .. } => break 'main_loop,
+                    Event::KeyDown { keycode, .. } => {
+                        if let Some(keycode) = keycode {
+                            match keycode {
+                                _ => {}
+                            }
+                        }
+                    }
+                    Event::KeyUp { keycode, .. } => {
+                        if let Some(keycode) = keycode {
+                            match keycode {
+                                _ => {}
+                            }
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            screen.canvas.set_draw_color(Color::BLACK);
+            screen.canvas.clear();
+
             if self.cpu.ime  && !self.cpu.ime_delay{
                 // https://gbdev.io/pandocs/Interrupts.html#ffff--ie-interrupt-enable
                 let interrupts = self.cpu.memory[0xff0f] & self.cpu.memory[0xffff];
