@@ -696,6 +696,7 @@ impl GameBoyEmulator {
             0x73 => self.op_ld_hl_reg(RegE),
             0x74 => self.op_ld_hl_reg(RegH),
             0x75 => self.op_ld_hl_reg(RegL),
+            0x77 => self.op_ld_hl_reg(RegA),
             0x78 => self.op_ld_reg_reg(RegA, RegB),
             0x79 => self.op_ld_reg_reg(RegA, RegC),
             0x7C => self.op_ld_reg_reg(RegA, RegH),
